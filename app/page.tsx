@@ -93,14 +93,21 @@ export default function HomePage() {
 
             <div className="section-head">
                 <h2>About</h2>
-                <span>TECH STACK</span>
+                <span>THE MANIFESTO</span>
             </div>
             <section className="rules">
-                <h3>Under the hood</h3>
-                <p style={{ fontSize: 15, lineHeight: 1.7 }}>
-                    NeoChan is built on <b>Next.js</b> with posts persisted in <b>Redis (Upstash)</b>. Image uploads go
-                    straight to <b>Upstash Blob</b> so we never touch your files on our servers. Threads purge
-                    oldest-first when a board hits capacity. The rest is up to the anons.
+                <div className="rules-intro" style={{ marginBottom: 16 }}>
+                    <span className="badge">WHY NEOCHAN</span>
+                    <h3 style={{ marginTop: 8 }}>Bringing Back The Anonymity The Internet Once Promised</h3>
+                </div>
+                <p style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 14, color: "#3a332a" }}>
+                    The internet has changed. Platforms that once championed anonymity have turned into identity engines where persistent profiles, usernames, and reputations constrain how you think and act. You end up curating a persona instead of speaking your mind.
+                </p>
+                <p style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 14, color: "#3a332a" }}>
+                    <b>NeoChan is different:</b> you are an Anon... just an anon. No shape, no identity, no personality, and <b>no digital footprint</b>. It provides true freedom of thought, freedom of speech, and the freedom to be unfiltered and be yourself without consequences.
+                </p>
+                <p style={{ fontSize: 15, lineHeight: 1.7, color: "#3a332a" }}>
+                    Everything here is ephemeral. Threads live and die by community bumps. Once a board hits capacity, dead threads are purged and vanish forever into the void. Welcome back to the glory days of the web.
                 </p>
             </section>
         </main>
