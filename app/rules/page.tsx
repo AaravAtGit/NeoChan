@@ -3,7 +3,7 @@ import { rules } from "@/lib/rules";
 import RulesAccordion from "@/components/RulesAccordion";
 
 export const metadata = {
-  title: "Rules — NeoChan",
+  title: "Rules - NeoChan",
   description: "The 47 Rules of the Internet. Lurk more.",
 };
 
@@ -20,7 +20,7 @@ export default function RulesPage() {
 
       <section className="hero">
         <span className="badge">MANDATORY READING</span>
-        <h1>Rules<small>of the Internet — 47 of them</small></h1>
+        <h1>Rules<small>of the Internet - 47 of them</small></h1>
         <p className="lead">
           These aren't site policies. They're the laws of nature for anyone posting
           anonymously online. Codified in 2006, refined through memetic warfare,
@@ -46,7 +46,7 @@ export default function RulesPage() {
         <p className="lead" style={{ color: "var(--paper)" }}>
           Rule 33 says it best. Before you post, read the thread. Before you start
           a thread, search the board. The internet is older than you think, and
-          your question has probably been answered before. If it hasn't —
+          your question has probably been answered before. If it hasn't -
           then you might actually have something worth posting.
         </p>
         <div style={{ marginTop: 24 }}>

@@ -104,7 +104,7 @@ export async function addPost(
     }
     const op: Post = { ...newPost, op: true };
     const now = Date.now();
-
+    
     const threadMeta = {
       no: String(op.no),
       board,
@@ -231,3 +231,4 @@ export async function getPostWithContext(no: number): Promise<(Post & { threadNo
 
   return undefined;
 }
+

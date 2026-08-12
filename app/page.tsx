@@ -53,7 +53,7 @@ export default function HomePage() {
                     <span className="badge red">MANDATORY LURKING</span>
                     <h3>The Laws of Anonymity</h3>
                     <p className="rules-lead">
-                        These aren&apos;t polite suggestions — they are the immutable laws of nature for anyone posting online.
+                        These aren&apos;t polite suggestions - they are the immutable laws of nature for anyone posting online.
                         Codified in the early 2000s, forged through memetic warfare, and still governing every thread.
                     </p>
                 </div>
