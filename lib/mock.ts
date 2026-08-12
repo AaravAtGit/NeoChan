@@ -1,14 +1,13 @@
 import { Board, Thread } from "./types";
 
 export const mockBoards: Board[] = [
-  { slug: "oc",   title: "Overclocking",    description: "Battlestations, LN2, BIOS mods. Bring receipts.", accent: "yellow" },
-  { slug: "g",    title: "Technology",      description: "Linux distros, routers, and why you shouldn't use Arch.", accent: "pink" },
-  { slug: "tech", title: "Engineering",     description: "PCBs, soldering, and the smell of burning flux.", accent: "red" },
+  { slug: "oc",   title: "Overclock Delhi",    description: "Overclock delhi's very own image board.", accent: "yellow" },
+  { slug: "b",  title: "Random",          description: "The most popular image board on the internet.", accent: "red" },
+  { slug: "g",    title: "Technology",      description: "Linux distros, Hardware, AIs, software, and reasons why you shouldn't use Arch.", accent: "pink" },
+  { slug: "vg",   title: "Video Games",     description: "Speedruns, emulation, and running doom on a fridge.", accent: "yellow" },
+  { slug: "mu",   title: "Music",           description: "Synths, DAWs, and 'your music tastes sucks'.", accent: "pink" },
   { slug: "diy",  title: "DIY",             description: "Woodworking, metalworking, questionable welding.", accent: "paper" },
-  { slug: "vg",   title: "Video Games",     description: "Speedruns, emulation, and 'it runs on a toaster'.", accent: "yellow" },
-  { slug: "mu",   title: "Music",           description: "Synths, DAWs, and 'your music tastes bad'.", accent: "pink" },
-  { slug: "qst",  title: "Quests",          description: "Choose-your-own-adventure threads. Bring dice.", accent: "red" },
-  { slug: "meta", title: "Meta",            description: "Site discussion, bug reports, and feature requests.", accent: "paper" },
+  { slug: "meta", title: "Meta",            description: "Site discussion, bug reports, and feature requests. Open for feedback and suggestion threads!", accent: "paper" },
 ];
 
 const seedImage = (seed: string, name: string, size: string) => ({

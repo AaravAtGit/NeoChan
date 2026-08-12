@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { getBoards } from "@/lib/store";
+import Link from "next/link";
 
 export default function Header({ current }: { current?: string }) {
     const boards = getBoards().slice(0, 6);
