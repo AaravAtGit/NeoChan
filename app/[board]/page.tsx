@@ -33,7 +33,7 @@ export default async function BoardPage({ params }: { params: Promise<{ board: s
                     <div className="meta">
                         <span>{threads.length} THREADS</span>
                         <span>POSTS: {threads.reduce((s, t) => s + 1 + t.replies.length, 0)}</span>
-                        <span>ANONYMOUS ONLY</span>
+                        <span>ANONYMOUS</span>
                     </div>
                 </section>
 

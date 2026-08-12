@@ -85,26 +85,49 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
 
     async function submit(e: FormEvent) {
         e.preventDefault();
-        if (!comment.trim() && !uploadedImage) {
-            alert("COMMENT OR IMAGE REQUIRED, ANON.");
+        if (isUploading) {
+            alert("PLEASE WAIT FOR IMAGE TO FINISH UPLOADING, ANON.");
             return;
+        }
+        if (!threadNo) {
+            if (!uploadedImage && !comment.trim()) {
+                alert("BOTH IMAGE AND COMMENT ARE REQUIRED TO START A THREAD, ANON.");
+                return;
+            }
+            if (!uploadedImage) {
+                alert("AN IMAGE IS REQUIRED TO START A THREAD, ANON.");
+                return;
+            }
+            if (!comment.trim()) {
+                alert("A COMMENT IS REQUIRED TO START A THREAD, ANON.");
+                return;
+            }
+        } else {
+            if (!comment.trim()) {
+                alert("COMMENT REQUIRED, ANON.");
+                return;
+            }
         }
         const sage = /sage/i.test(email);
         startTransition(async () => {
-            await addPostAction(board, threadNo ?? null, {
-                name: name.trim() || "Anonymous",
-                email,
-                subject,
-                comment,
-                sage,
-                image: uploadedImage ? { url: uploadedImage.url, name: uploadedImage.name, size: uploadedImage.size } : undefined,
-            });
-            setComment("");
-            setSubject("");
-            setUploadedImage(null);
-            setOriginalFileName("");
-            setIsOpen(false);
-            router.refresh();
+            try {
+                await addPostAction(board, threadNo ?? null, {
+                    name: name.trim() || "Anonymous",
+                    email,
+                    subject,
+                    comment,
+                    sage,
+                    image: uploadedImage ? { url: uploadedImage.url, name: uploadedImage.name, size: uploadedImage.size } : undefined,
+                });
+                setComment("");
+                setSubject("");
+                setUploadedImage(null);
+                setOriginalFileName("");
+                setIsOpen(false);
+                router.refresh();
+            } catch (err: any) {
+                alert(err?.message || "Failed to post");
+            }
         });
     }
 
@@ -128,7 +151,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     <span>{threadNo ? `Post a Reply to No.${threadNo}` : `Start a New Thread on /${board}/`}</span>
                 </button>
                 <span className="pf-closed-hint">
-                    {threadNo ? "Anonymous & Sage supported" : "Anonymous only — Image or comment required"}
+                    {threadNo ? "Anonymous & Sage supported" : "Anonymous only (Image & comment required)"}
                 </span>
             </div>
         );
@@ -174,7 +197,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                             </div>
                         )}
                         <div className="field filebox">
-                            <label>Image</label>
+                            <label>Image {!threadNo ? "(Required)" : "(Optional)"}</label>
                             {uploadedImage ? (
                                 <div className="pf-uploaded">
                                     <img src={uploadedImage.url} className="pf-preview" alt="" />
@@ -259,7 +282,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                         </div>
                     </div>
                     <div className="field">
-                        <label>Comment</label>
+                        <label>Comment (Required)</label>
                         <textarea
                             value={comment}
                             onChange={e => setComment(e.target.value)}
@@ -283,3 +306,4 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
         </form>
     );
 }
+

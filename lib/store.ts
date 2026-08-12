@@ -99,6 +99,9 @@ export async function addPost(
   };
 
   if (threadNo === null) {
+    if (!post.comment?.trim() || !post.image) {
+      throw new Error("Both image and comment are required to create a new thread.");
+    }
     const op: Post = { ...newPost, op: true };
     const now = Date.now();
 
@@ -119,7 +122,16 @@ export async function addPost(
     const count = await redis.zcard(`board:${board}:threads`);
     if (count > MAX_THREADS_PER_BOARD) {
       const excess = count - MAX_THREADS_PER_BOARD;
-      const toPrune: string[] = await redis.zrange(`board:${board}:threads`, 0, excess - 1);
+      const candidates: string[] = await redis.zrange(
+        `board:${board}:threads`,
+        0,
+        excess + (board === "oc" ? 5 : 0)
+      );
+
+      // Hardcoding to reserve the OG Thread. 
+      const toPrune = (
+        board === "oc" ? candidates.filter((no) => no !== "1" && Number(no) !== 1) : candidates
+      ).slice(0, excess);
 
       for (const oldNo of toPrune) {
         await deleteThread(board, oldNo);
@@ -128,6 +140,9 @@ export async function addPost(
 
     return op;
   } else {
+    if (!post.comment?.trim()) {
+      throw new Error("Comment is required for replies.");
+    }
     const exists = await redis.exists(`thread:${threadNo}`);
     if (!exists) throw new Error("thread not found");
 
@@ -148,6 +163,11 @@ export async function addPost(
 
 
 async function deleteThread(board: string, threadNo: string): Promise<void> {
+  // Hardcoded rule: Never delete thread/post No. 1 on /oc/
+  if (board === "oc" && (String(threadNo) === "1" || Number(threadNo) === 1)) {
+    return;
+  }
+
   const rawReplies = await redis.lrange(`thread:${threadNo}:replies`, 0, -1) as (string | Post)[];
   const replyNos: number[] = rawReplies.map((r) => {
     const parsed: Post = typeof r === "string" ? JSON.parse(r) : r;
@@ -160,6 +180,9 @@ async function deleteThread(board: string, threadNo: string): Promise<void> {
   pipe.del(`thread:${threadNo}:replies`);
   pipe.del(`post:${threadNo}:loc`);
   for (const rNo of replyNos) {
+    if (board === "oc" && (String(rNo) === "1" || Number(rNo) === 1)) {
+      continue;
+    }
     pipe.del(`post:${rNo}:loc`);
   }
   await pipe.exec();

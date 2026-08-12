@@ -272,31 +272,35 @@ export default function ThreadClient({
     async function submitQr(e: FormEvent) {
         e.preventDefault();
         if (!threadNo) return;
-        if (!comment.trim() && !file) {
-            alert("COMMENT OR IMAGE REQUIRED, ANON.");
+        if (!comment.trim()) {
+            alert("COMMENT REQUIRED, ANON.");
             return;
         }
         const sage = /sage/i.test(email);
         startTransition(async () => {
-            await addPostAction(board, threadNo, {
-                name: name.trim() || "Anonymous",
-                email,
-                subject: "",
-                comment,
-                sage,
-                image: file
-                    ? {
-                          url: filePreview,
-                          name: file.name,
-                          size: `${Math.round(file.size / 1024)} KB`,
-                      }
-                    : undefined,
-            });
-            setComment("");
-            setFile(null);
-            setFilePreview("");
-            setQrOpen(false);
-            router.refresh();
+            try {
+                await addPostAction(board, threadNo, {
+                    name: name.trim() || "Anonymous",
+                    email,
+                    subject: "",
+                    comment,
+                    sage,
+                    image: file
+                        ? {
+                              url: filePreview,
+                              name: file.name,
+                              size: `${Math.round(file.size / 1024)} KB`,
+                          }
+                        : undefined,
+                });
+                setComment("");
+                setFile(null);
+                setFilePreview("");
+                setQrOpen(false);
+                router.refresh();
+            } catch (err: any) {
+                alert(err?.message || "Failed to post reply");
+            }
         });
     }
 
