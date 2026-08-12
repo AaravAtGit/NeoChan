@@ -808,6 +808,7 @@ button {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 14px;
+    scroll-margin: 30px;
     transition:
         transform 0.08s,
         box-shadow 0.08s;
@@ -852,6 +853,7 @@ button {
     box-shadow: var(--sh-lg);
     background: var(--paper);
     margin-bottom: 36px;
+    scroll-margin: 30px;
     animation: pfOpen 0.15s cubic-bezier(0, 0, 0.2, 1);
 }
 @keyframes pfOpen {
@@ -966,6 +968,7 @@ button {
     justify-content: center;
     text-align: center;
     text-decoration: none;
+    cursor: pointer;
 }
 .tabbar a:first-child,
 .tabbar button:first-child {

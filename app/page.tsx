@@ -32,11 +32,11 @@ export default function HomePage() {
                 <i />
             </div>
 
-            <div className="section-head">
+            <div className="section-head" id="threads">
                 <h2>Boards</h2>
                 <span>{boards.length} ACTIVE BOARDS</span>
             </div>
-            <div className="board-grid">
+            <div className="board-grid" id="boards">
                 {boards.map(b => (
                     <BoardCard key={b.slug} board={b} />
                 ))}

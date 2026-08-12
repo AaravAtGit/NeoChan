@@ -18,6 +18,35 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
     const mode = threadNo ? "Reply" : "New Thread";
 
     useEffect(() => {
+        function handleOpenPost() {
+            setIsOpen(true);
+            setTimeout(() => {
+                const form = document.getElementById("postform") || document.querySelector<HTMLElement>(".postform, .pf-closed-bar");
+                if (form) {
+                    form.scrollIntoView({ behavior: "smooth", block: "center" });
+                    form.animate(
+                        [
+                            { outline: "4px solid var(--yellow)" },
+                            { outline: "4px solid transparent" },
+                        ],
+                        {
+                            duration: 900,
+                            easing: "ease-out",
+                        }
+                    );
+                }
+                const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+                    ".postform textarea, .postform input[type='text'], .postform input:not([type='file'])"
+                );
+                input?.focus();
+            }, 80);
+        }
+
+        window.addEventListener("neochan:open-post", handleOpenPost);
+        return () => window.removeEventListener("neochan:open-post", handleOpenPost);
+    }, []);
+
+    useEffect(() => {
         if (!threadNo) return;
 
         function handleQuote(e: Event) {
@@ -30,14 +59,17 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                 return (base ? base + "\n" : "") + insertion + " ";
             });
             setTimeout(() => {
-                const form = document.querySelector<HTMLElement>(".postform");
+                const form = document.getElementById("postform") || document.querySelector<HTMLElement>(".postform");
                 if (form) {
+                    form.scrollIntoView({ behavior: "smooth", block: "center" });
                     form.animate([{ outline: "4px solid var(--yellow)" }, { outline: "4px solid transparent" }], {
                         duration: 900,
                         easing: "ease-out",
                     });
                 }
-            }, 100);
+                const textarea = document.querySelector<HTMLTextAreaElement>(".postform textarea");
+                textarea?.focus();
+            }, 80);
         }
         window.addEventListener("neochan:quote", handleQuote);
         return () => window.removeEventListener("neochan:quote", handleQuote);
@@ -79,7 +111,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
 
     if (!isOpen) {
         return (
-            <div className="pf-closed-bar">
+            <div className="pf-closed-bar" id="postform">
                 <button
                     type="button"
                     className="btn yellow pf-toggle-btn"
@@ -104,7 +136,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
     }
 
     return (
-        <form className="postform" onSubmit={submit}>
+        <form className="postform" id="postform" onSubmit={submit}>
             <div className="hazard" style={{ borderBottom: "var(--bd)" }} />
             <div className="pf-body">
                 <div className="pf-title">
