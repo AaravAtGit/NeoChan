@@ -20,6 +20,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
     const [comment, setComment] = useState("");
     const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
     const [originalFileName, setOriginalFileName] = useState<string>("");
+    const [honeypot, setHoneypot] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     const [isPending, startTransition] = useTransition();
 
@@ -118,11 +119,12 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     comment,
                     sage,
                     image: uploadedImage ? { url: uploadedImage.url, name: uploadedImage.name, size: uploadedImage.size } : undefined,
-                });
+                }, honeypot);
                 setComment("");
                 setSubject("");
                 setUploadedImage(null);
                 setOriginalFileName("");
+                setHoneypot("");
                 setIsOpen(false);
                 router.refresh();
             } catch (err: any) {
@@ -173,6 +175,17 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     </button>
                 </div>
                 <div className="pf-grid">
+
+                    <input
+                        type="text"
+                        name="website"
+                        value={honeypot}
+                        onChange={e => setHoneypot(e.target.value)}
+                        style={{ display: "none", position: "absolute", left: "-9999px" }}
+                        tabIndex={-1}
+                        autoComplete="off"
+                        aria-hidden="true"
+                    />
                     <div>
                         <div className="field">
                             <label>Name</label>
