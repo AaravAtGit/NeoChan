@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { rules } from "@/lib/rules";
+import RulesAccordion from "@/components/RulesAccordion";
 
 export const metadata = {
   title: "Rules — NeoChan",
@@ -35,20 +36,7 @@ export default function RulesPage() {
       <div className="divider"><i /></div>
 
       {/* the rules */}
-      <div className="rules-list">
-        {rules.map((r) => (
-          <details key={r.no} className="rule-item" id={`rule-${r.no}`}>
-            <summary>
-              <span className="rule-num">{String(r.no).padStart(2, "0")}</span>
-              <span className="rule-title">{r.title}</span>
-              <span className="rule-plus">+</span>
-            </summary>
-            <div className="rule-body">
-              <p>{r.explanation}</p>
-            </div>
-          </details>
-        ))}
-      </div>
+      <RulesAccordion rules={rules} />
 
       <div className="divider"><i /></div>
 
