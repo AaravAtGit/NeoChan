@@ -1,8 +1,14 @@
 import BoardCard from "@/components/BoardCard";
 import { getBoards } from "@/lib/store";
+import { rules } from "@/lib/rules";
+import Link from "next/link";
 
 export default function HomePage() {
     const boards = getBoards();
+    // Key iconic rules to showcase on the homepage
+    const highlightRuleNos = [1, 2, 3, 8, 9, 14, 20, 32, 33, 34];
+    const highlightedRules = rules.filter(r => highlightRuleNos.includes(r.no));
+
     return (
         <main className="wrap">
             <section className="hero">
@@ -42,19 +48,45 @@ export default function HomePage() {
 
             <div className="section-head">
                 <h2>Rules</h2>
-                <span>READ BEFORE POSTING</span>
+                <span>THE 47 RULES OF THE INTERNET</span>
             </div>
-            <section className="rules">
-                <h3>The 5 Commandments</h3>
-                <ol>
-                    <li>Be anonymous. No names, no handles, no linking accounts.</li>
-                    <li>
-                        <code>sage</code> in the email field to not bump a thread.
-                    </li>
-                    <li>No personal info. Blurred faces, masked IPs, scrubbed EXIF.</li>
-                    <li>Images required on OP. Text-only threads get sage'd into oblivion.</li>
-                    <li>Check the catalog — er, the board — before posting a duplicate.</li>
-                </ol>
+            <section className="rules-section">
+                <div className="rules-intro">
+                    <span className="badge red">MANDATORY LURKING</span>
+                    <h3>The Laws of Anonymity</h3>
+                    <p className="rules-lead">
+                        These aren&apos;t polite suggestions — they are the immutable laws of nature for anyone posting online.
+                        Codified in the early 2000s, forged through memetic warfare, and still governing every thread.
+                    </p>
+                </div>
+
+                <div className="home-rules-grid">
+                    {highlightedRules.map((r) => (
+                        <Link
+                            key={r.no}
+                            href={`/rules#rule-${r.no}`}
+                            className="home-rule-card"
+                        >
+                            <div className="hr-head">
+                                <span className="hr-num">#{String(r.no).padStart(2, "0")}</span>
+                                <span className="hr-arrow">→</span>
+                            </div>
+                            <h4 className="hr-title">{r.title}</h4>
+                            <p className="hr-desc">{r.explanation}</p>
+                        </Link>
+                    ))}
+                </div>
+
+                <div className="rules-footer-cta">
+                    <div className="rules-cta-info">
+                        <span className="rules-cta-tag">FULL ARCHIVE</span>
+                        <h4>All 47 Commandments Codified</h4>
+                        <p>From Rule 1 to Rule 47, read before you post. Lurk more.</p>
+                    </div>
+                    <Link href="/rules" className="btn yellow">
+                        VIEW ALL 47 RULES →
+                    </Link>
+                </div>
             </section>
 
             <div className="divider">

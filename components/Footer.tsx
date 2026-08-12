@@ -8,7 +8,7 @@ export default function Footer() {
   return (
     <nav className="tabbar">
       <Link href="/" className={active("/")}>Home</Link>
-      <Link href="/" className="">Rules</Link>
+      <Link href="/rules" className={active("/rules")}>Rules</Link>
       <Link href="/" className="">Archive</Link>
       <Link href="/" className="">Top</Link>
       <button className="post" onClick={() => alert("Step 2: post from any page")}>Post</button>
