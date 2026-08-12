@@ -932,13 +932,60 @@ button {
     color: #6b6257;
     margin-left: auto;
 }
-.pf-preview {
-    width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border: var(--bd);
+.pf-uploaded {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 8px;
+    background: var(--paper-2);
+    border: 2px solid var(--black);
+    padding: 8px 10px;
     box-shadow: 3px 3px 0 var(--black);
-    margin-top: 10px;
+}
+.pf-uploaded .pf-preview {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border: 2px solid var(--black);
+    box-shadow: 2px 2px 0 var(--black);
+    margin-top: 0;
+    flex-shrink: 0;
+}
+.pf-upload-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+}
+.pf-upload-info .mono {
+    font-size: 11px;
+    font-weight: 700;
+    word-break: break-all;
+    line-height: 1.25;
+    color: var(--black);
+    max-height: 2.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pf-upload-info .tiny {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #6b6257;
+}
+.pf-upload-info .btn {
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 3px 8px;
+    font-size: 10px;
+}
+.pf-uploading-indicator {
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: var(--black);
+    color: var(--yellow);
+    display: inline-block;
+    border: 1px solid var(--black);
 }
 
 /* tab bar */

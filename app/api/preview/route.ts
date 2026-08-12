@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   if (!no || Number.isNaN(no)) {
     return NextResponse.json({ error: "bad no" }, { status: 400 });
   }
-  const post = getPostWithContext(no);
+  const post = await getPostWithContext(no);
   if (!post) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json(post);
 }

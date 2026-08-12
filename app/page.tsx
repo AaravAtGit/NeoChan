@@ -1,11 +1,9 @@
 import BoardCard from "@/components/BoardCard";
-import { getBoards } from "@/lib/store";
+import { boards } from "@/lib/boards";
 import { rules } from "@/lib/rules";
 import Link from "next/link";
 
 export default function HomePage() {
-    const boards = getBoards();
-    // Key iconic rules to showcase on the homepage
     const highlightRuleNos = [1, 2, 3, 8, 9, 14, 20, 32, 33, 34];
     const highlightedRules = rules.filter(r => highlightRuleNos.includes(r.no));
 

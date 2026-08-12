@@ -1,16 +1,17 @@
 import PostForm from "@/components/PostForm";
 import ThreadCard from "@/components/ThreadCard";
 import ThreadClient from "@/components/ThreadClient";
-import { getBoard, getThreads } from "@/lib/store";
+import { getBoardBySlug } from "@/lib/boards";
+import { getThreads } from "@/lib/store";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export default async function BoardPage({ params }: { params: Promise<{ board: string }> }) {
     const { board: boardSlug } = await params;
-    const board = getBoard(boardSlug);
+    const board = getBoardBySlug(boardSlug);
     if (!board) notFound();
 
-    const threads = getThreads(board.slug);
+    const threads = await getThreads(board.slug);
 
     return (
         <ThreadClient board={board.slug}>

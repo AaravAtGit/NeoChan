@@ -9,9 +9,9 @@ export async function addPostAction(
   threadNo: number | null,
   input: Omit<Post, "no" | "date" | "op">
 ) {
-  // Server-side: override client date with server time
+
   const serverStamp = nowStamp();
-  addPost(board, threadNo, { ...input, date: serverStamp });
+  await addPost(board, threadNo, { ...input, date: serverStamp });
   revalidatePath(`/${board}`);
   if (threadNo) revalidatePath(`/${board}/${threadNo}`);
 }

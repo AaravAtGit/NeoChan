@@ -2,8 +2,8 @@ import { getThreads } from "@/lib/store";
 import { Board } from "@/lib/types";
 import Link from "next/link";
 
-export default function BoardCard({ board }: { board: Board }) {
-    const threads = getThreads(board.slug);
+export default async function BoardCard({ board }: { board: Board }) {
+    const threads = await getThreads(board.slug);
     const posts = threads.reduce((sum, t) => sum + 1 + t.replies.length, 0);
     return (
         <Link href={`/${board.slug}`} className={`board-card ${board.accent}`}>

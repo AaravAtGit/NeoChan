@@ -3,6 +3,13 @@
 import { useState, useTransition, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addPostAction } from "@/lib/actions";
+import { UploadButton } from "@/lib/uploadthing";
+
+type UploadedImage = {
+    url: string;
+    name: string;
+    size: string;
+};
 
 export default function PostForm({ board, threadNo }: { board: string; threadNo?: number }) {
     const router = useRouter();
@@ -11,8 +18,9 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
     const [email, setEmail] = useState("");
     const [subject, setSubject] = useState("");
     const [comment, setComment] = useState("");
-    const [file, setFile] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string>("");
+    const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
+    const [originalFileName, setOriginalFileName] = useState<string>("");
+    const [isUploading, setIsUploading] = useState(false);
     const [isPending, startTransition] = useTransition();
 
     const mode = threadNo ? "Reply" : "New Thread";
@@ -75,18 +83,9 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
         return () => window.removeEventListener("neochan:quote", handleQuote);
     }, [threadNo]);
 
-    function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        setFile(f);
-        const r = new FileReader();
-        r.onload = () => setPreview(r.result as string);
-        r.readAsDataURL(f);
-    }
-
     async function submit(e: FormEvent) {
         e.preventDefault();
-        if (!comment.trim() && !file) {
+        if (!comment.trim() && !uploadedImage) {
             alert("COMMENT OR IMAGE REQUIRED, ANON.");
             return;
         }
@@ -98,12 +97,12 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                 subject,
                 comment,
                 sage,
-                image: file ? { url: preview, name: file.name, size: `${Math.round(file.size / 1024)} KB` } : undefined,
+                image: uploadedImage ? { url: uploadedImage.url, name: uploadedImage.name, size: uploadedImage.size } : undefined,
             });
             setComment("");
             setSubject("");
-            setFile(null);
-            setPreview("");
+            setUploadedImage(null);
+            setOriginalFileName("");
             setIsOpen(false);
             router.refresh();
         });
@@ -175,8 +174,88 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                             </div>
                         )}
                         <div className="field filebox">
-                            <input type="file" accept="image/*" onChange={onFileChange} />
-                            {preview && <img src={preview} className="pf-preview" alt="" />}
+                            <label>Image</label>
+                            {uploadedImage ? (
+                                <div className="pf-uploaded">
+                                    <img src={uploadedImage.url} className="pf-preview" alt="" />
+                                    <div className="pf-upload-info">
+                                        <span className="mono" title={uploadedImage.name}>{uploadedImage.name}</span>
+                                        <span className="tiny">{uploadedImage.size}</span>
+                                        <button
+                                            type="button"
+                                            className="btn small"
+                                            onClick={() => {
+                                                setUploadedImage(null);
+                                                setOriginalFileName("");
+                                            }}
+                                        >
+                                            ✕ Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <UploadButton
+                                    endpoint="imageUploader"
+                                    onBeforeUploadBegin={(files) => {
+                                        if (files && files[0]) {
+                                            setOriginalFileName(files[0].name);
+                                        }
+                                        return files;
+                                    }}
+                                    onUploadBegin={() => setIsUploading(true)}
+                                    onClientUploadComplete={(res) => {
+                                        setIsUploading(false);
+                                        if (res && res[0]) {
+                                            const f = res[0];
+                                            const sizeStr = f.size < 1024 * 1024
+                                                ? `${Math.round(f.size / 1024)} KB`
+                                                : `${(f.size / (1024 * 1024)).toFixed(1)} MB`;
+                                            setUploadedImage({
+                                                url: f.ufsUrl,
+                                                name: originalFileName || f.name,
+                                                size: sizeStr,
+                                            });
+                                        }
+                                    }}
+                                    onUploadError={(err) => {
+                                        setIsUploading(false);
+                                        alert(`Upload failed: ${err.message}`);
+                                    }}
+                                    appearance={{
+                                        button: {
+                                            background: "var(--black)",
+                                            color: "var(--paper)",
+                                            border: "2px solid var(--black)",
+                                            boxShadow: "3px 3px 0 var(--yellow)",
+                                            fontFamily: "var(--mono)",
+                                            fontWeight: 700,
+                                            fontSize: "12px",
+                                            textTransform: "uppercase",
+                                            padding: "8px 18px",
+                                            cursor: "pointer",
+                                        },
+                                        allowedContent: {
+                                            color: "var(--paper)",
+                                            fontFamily: "var(--mono)",
+                                            fontSize: "10px",
+                                            opacity: 0.6,
+                                        },
+                                    }}
+                                    content={{
+                                        button({ isUploading: uploading }) {
+                                            return uploading ? "Uploading…" : "Choose Image";
+                                        },
+                                        allowedContent() {
+                                            return "Images up to 4MB";
+                                        },
+                                    }}
+                                />
+                            )}
+                            {isUploading && (
+                                <div className="pf-uploading-indicator">
+                                    <span className="mono tiny">UPLOADING...</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="field">
@@ -184,13 +263,13 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                         <textarea
                             value={comment}
                             onChange={e => setComment(e.target.value)}
-                            placeholder=">implying greentext works\n>>102436"
+                            placeholder={">implying greentext works\n>>102436"}
                         />
                     </div>
                 </div>
                 <div className="pf-actions">
-                    <button className="btn yellow" disabled={isPending}>
-                        {isPending ? "Posting…" : "Post It"}
+                    <button className="btn yellow" disabled={isPending || isUploading}>
+                        {isPending ? "Posting…" : isUploading ? "Wait for upload…" : "Post It"}
                     </button>
                     <button
                         type="button"
@@ -199,7 +278,6 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     >
                         Cancel
                     </button>
-                    <span className="tiny">Step 2: image upload → Upstash, post → Redis</span>
                 </div>
             </div>
         </form>
