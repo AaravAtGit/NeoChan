@@ -1,6 +1,7 @@
 import { Thread as ThreadType } from "@/lib/types";
 import { formatComment, buildBacklinksMap } from "@/lib/utils";
 import Reply from "./Reply";
+import PostImage from "./PostImage";
 
 export default function Thread({ thread }: { thread: ThreadType }) {
   const op = thread.op;
@@ -27,12 +28,7 @@ export default function Thread({ thread }: { thread: ThreadType }) {
         <div className="subj">{thread.subject}</div>
       </header>
       <div className="op-body">
-        {op.image && (
-          <figure className="thumb">
-            <img src={op.image.url} alt="" />
-            <figcaption>File: {op.image.name} ({op.image.size})</figcaption>
-          </figure>
-        )}
+        {op.image && <PostImage image={op.image} />}
         <div className="comment-col">
           <div
             className="comment"

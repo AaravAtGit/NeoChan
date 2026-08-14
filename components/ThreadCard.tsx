@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Thread } from "@/lib/types";
 import { formatComment } from "@/lib/utils";
+import PostImage from "./PostImage";
 
 export default function ThreadCard({
   board,
@@ -40,12 +41,7 @@ export default function ThreadCard({
         <div className="subj">{thread.subject}</div>
       </header>
       <div className="op-body">
-        {thread.op.image && (
-          <figure className="thumb">
-            <img src={thread.op.image.url} alt="" />
-            <figcaption>File: {thread.op.image.name} ({thread.op.image.size})</figcaption>
-          </figure>
-        )}
+        {thread.op.image && <PostImage image={thread.op.image} />}
         <div
           className="comment"
           dangerouslySetInnerHTML={{ __html: formatComment(thread.op.comment) }}
@@ -79,16 +75,13 @@ export default function ThreadCard({
                 </span>
                 {r.sage && <span className="badge sage">SAGE</span>}
               </div>
-              {r.image && (
-                <figure className="thumb">
-                  <img src={r.image.url} alt="" />
-                  <figcaption>File: {r.image.name} ({r.image.size})</figcaption>
-                </figure>
-              )}
-              <div
-                className="comment"
-                dangerouslySetInnerHTML={{ __html: formatComment(r.comment) }}
-              />
+              <div className="reply-body">
+                {r.image && <PostImage image={r.image} isReply />}
+                <div
+                  className="comment"
+                  dangerouslySetInnerHTML={{ __html: formatComment(r.comment) }}
+                />
+              </div>
             </article>
           ))}
         </div>

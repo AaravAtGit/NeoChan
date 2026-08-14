@@ -1,5 +1,6 @@
 import { Post } from "@/lib/types";
 import { formatComment } from "@/lib/utils";
+import PostImage from "./PostImage";
 
 export default function Reply({
   post,
@@ -25,27 +26,24 @@ export default function Reply({
         </span>
         {post.sage && <span className="badge sage">SAGE</span>}
       </div>
-      {post.image && (
-        <figure className="thumb">
-          <img src={post.image.url} alt="" />
-          <figcaption>File: {post.image.name} ({post.image.size})</figcaption>
-        </figure>
-      )}
-      <div className="comment-col">
-        <div
-          className="comment"
-          dangerouslySetInnerHTML={{ __html: formatComment(post.comment) }}
-        />
-        {backlinks.length > 0 && (
-          <div className="backlinks">
-            <span>Replies:</span>
-            {backlinks.map((no) => (
-              <a key={no} className="qlink" data-no={no} href={`#p${no}`}>
-                &gt;&gt;{no}
-              </a>
-            ))}
-          </div>
-        )}
+      <div className="reply-body">
+        {post.image && <PostImage image={post.image} isReply />}
+        <div className="comment-col">
+          <div
+            className="comment"
+            dangerouslySetInnerHTML={{ __html: formatComment(post.comment) }}
+          />
+          {backlinks.length > 0 && (
+            <div className="backlinks">
+              <span>Replies:</span>
+              {backlinks.map((no) => (
+                <a key={no} className="qlink" data-no={no} href={`#p${no}`}>
+                  &gt;&gt;{no}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </article>
   );
