@@ -2,7 +2,7 @@ import { boards as allBoards } from "@/lib/boards";
 import Link from "next/link";
 
 export default function Header({ current }: { current?: string }) {
-    const boards = allBoards.slice(0, 6);
+    const boards = allBoards.slice(0, 10);
     return (
         <>
             <header className="topbar">
