@@ -1174,6 +1174,21 @@ button {
     font-weight: 700;
     text-decoration: underline 2px;
 }
+.preview-popup .pp-loading {
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #5c5549;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.preview-popup .pp-not-found {
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+}
 
 .reply:has(:target),
 .op-head:has(:target) {

@@ -64,12 +64,12 @@ export default function ThreadCard({
           }}
         >
           {shown.map((r) => (
-            <article key={r.no} className="reply">
+            <article key={r.no} id={`p${r.no}`} className="reply" data-thread-no={thread.no} data-board={board}>
               <div className="rhead">
                 <span className="name">{r.name}</span>
                 <span className="dateblk">{r.date}</span>
                 <span className="no">
-                  <Link href={`/${board}/${thread.no}#p${r.no}`}>
+                  <Link href={`/${board}/${thread.no}#p${r.no}`} data-no={r.no} className="post-no">
                     No.{r.no}
                   </Link>
                 </span>

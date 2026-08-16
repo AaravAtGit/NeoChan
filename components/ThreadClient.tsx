@@ -6,19 +6,58 @@ import { formatComment } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState, useTransition } from "react";
 
+type PostWithContext = Post & {
+    threadNo?: number;
+    board?: string;
+    formattedComment?: string;
+};
+
 type PreviewState = {
-    post: Post & { threadNo?: number; board?: string };
+    post?: PostWithContext;
+    loading?: boolean;
+    notFound?: boolean;
+    no: string;
     x: number;
     y: number;
 } | null;
 
+function getPostFromDOM(no: string, defaultBoard?: string, defaultThreadNo?: number): PostWithContext | null {
+    const el = document.getElementById(`p${no}`);
+    if (!el) return null;
+
+    const isThreadCard = el.classList.contains("thread-card");
+    const nameEl = el.querySelector(".name");
+    const dateEl = el.querySelector(".dateblk");
+    const commentEl = el.querySelector(".comment");
+    const imgEl = el.querySelector(".thumb-img") as HTMLImageElement | null;
+    const isOp = isThreadCard || !!el.querySelector(".badge:not(.sage)");
+    const isSage = !!el.querySelector(".badge.sage");
+    const cardThreadNo = el.closest("[data-thread-no]")?.getAttribute("data-thread-no");
+    const cardBoard = el.closest("[data-board]")?.getAttribute("data-board");
+
+    return {
+        no: parseInt(no, 10),
+        name: nameEl?.textContent?.trim() || "Anonymous",
+        date: dateEl?.textContent?.trim() || "",
+        comment: "",
+        formattedComment: commentEl?.innerHTML || "",
+        op: isOp,
+        sage: isSage,
+        image: imgEl ? { url: imgEl.src, name: imgEl.alt || "image", size: "" } : undefined,
+        threadNo: cardThreadNo ? parseInt(cardThreadNo, 10) : defaultThreadNo,
+        board: cardBoard || defaultBoard,
+    };
+}
+
 export default function ThreadClient({
     board,
     threadNo,
+    initialPosts,
     children,
 }: {
     board: string;
     threadNo?: number;
+    initialPosts?: PostWithContext[];
     children: React.ReactNode;
 }) {
     const router = useRouter();
@@ -26,7 +65,23 @@ export default function ThreadClient({
     const [preview, setPreview] = useState<PreviewState>(null);
     const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const activeNo = useRef<string | null>(null);
-    const postCache = useRef<Map<string, Post & { threadNo?: number; board?: string }>>(new Map());
+    const postCache = useRef<Map<string, PostWithContext>>(null!);
+    if (!postCache.current) {
+        postCache.current = new Map();
+        if (initialPosts) {
+            for (const p of initialPosts) {
+                postCache.current.set(String(p.no), p);
+            }
+        }
+    }
+
+    useEffect(() => {
+        if (initialPosts) {
+            for (const p of initialPosts) {
+                postCache.current.set(String(p.no), p);
+            }
+        }
+    }, [initialPosts]);
 
     const [qrOpen, setQrOpen] = useState(false);
     const [qrMinimized, setQrMinimized] = useState(false);
@@ -116,6 +171,50 @@ export default function ThreadClient({
     }, [isDragging]);
 
     useEffect(() => {
+        // Pre-fetch any missing quotes on the page in idle time
+        const missingNos = new Set<string>();
+        document.querySelectorAll("a.qlink").forEach(el => {
+            const no = el.getAttribute("data-no") || el.textContent?.replace(/\D/g, "");
+            if (no && !postCache.current.has(no)) {
+                missingNos.add(no);
+            }
+        });
+
+        if (missingNos.size === 0) return;
+
+        const controller = new AbortController();
+        const fetchMissing = async () => {
+            for (const no of Array.from(missingNos)) {
+                if (controller.signal.aborted) break;
+                if (postCache.current.has(no)) continue;
+                try {
+                    const res = await fetch(`/api/preview?no=${no}`, { signal: controller.signal });
+                    if (res.ok) {
+                        const data: PostWithContext = await res.json();
+                        postCache.current.set(no, data);
+                    }
+                } catch {
+                    // Ignore background fetch aborts / errors
+                }
+            }
+        };
+
+        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+            const id = (window as any).requestIdleCallback(() => fetchMissing());
+            return () => {
+                controller.abort();
+                if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
+            };
+        } else {
+            const timer = setTimeout(fetchMissing, 300);
+            return () => {
+                controller.abort();
+                clearTimeout(timer);
+            };
+        }
+    }, [board, threadNo, initialPosts]);
+
+    useEffect(() => {
         async function showPreview(no: string, targetEl: HTMLElement) {
             clearHideTimer();
             activeNo.current = no;
@@ -132,23 +231,42 @@ export default function ThreadClient({
             }
             if (y < 10) y = 10;
 
+            // 1. Instant check in memory cache
             if (postCache.current.has(no)) {
                 const cachedPost = postCache.current.get(no)!;
-                setPreview({ post: cachedPost, x, y });
+                setPreview({ post: cachedPost, no, x, y, loading: false });
                 return;
             }
 
+            // 2. Instant check in current DOM
+            const domPost = getPostFromDOM(no, board, threadNo);
+            if (domPost) {
+                postCache.current.set(no, domPost);
+                setPreview({ post: domPost, no, x, y, loading: false });
+                return;
+            }
+
+            // 3. Fallback: Show instant loading frame while fetching
+            setPreview({ loading: true, no, x, y });
+
             try {
                 const res = await fetch(`/api/preview?no=${no}`);
-                if (!res.ok) return;
-                const post: Post & { threadNo?: number; board?: string } = await res.json();
+                if (!res.ok) {
+                    if (activeNo.current === no) {
+                        setPreview({ notFound: true, no, x, y, loading: false });
+                    }
+                    return;
+                }
+                const post: PostWithContext = await res.json();
                 postCache.current.set(no, post);
 
                 if (activeNo.current === no) {
-                    setPreview({ post, x, y });
+                    setPreview({ post, no, x, y, loading: false });
                 }
             } catch {
-                console.log("Oops something went wrong");
+                if (activeNo.current === no) {
+                    setPreview({ notFound: true, no, x, y, loading: false });
+                }
             }
         }
 
@@ -223,7 +341,7 @@ export default function ThreadClient({
                 try {
                     const res = await fetch(`/api/preview?no=${no}`);
                     if (res.ok) {
-                        const data: Post & { threadNo?: number; board?: string } = await res.json();
+                        const data: PostWithContext = await res.json();
                         postCache.current.set(no, data);
                         if (data.threadNo) {
                             router.push(`/${data.board || board}/${data.threadNo}#p${no}`);
@@ -432,22 +550,37 @@ export default function ThreadClient({
                     onMouseEnter={clearHideTimer}
                     onMouseLeave={scheduleHide}
                 >
-                    <div className="pp-head">
-                        <span className="name">{preview.post.name}</span>
-                        <span className="dateblk">{preview.post.date}</span>
-                        <span className="no">No.{preview.post.no}</span>
-                        {preview.post.op && <span className="badge">OP</span>}
-                        {preview.post.sage && <span className="badge sage">SAGE</span>}
-                    </div>
-                    {preview.post.image && <img src={preview.post.image.url} alt="" className="pp-thumb" />}
-                    <div
-                        className="pp-comment"
-                        dangerouslySetInnerHTML={{
-                            __html: formatComment(preview.post.comment),
-                        }}
-                    />
+                    {preview.loading ? (
+                        <div className="pp-loading">
+                            <span>⚡</span>
+                            <span>Loading post No.{preview.no}…</span>
+                        </div>
+                    ) : preview.notFound || !preview.post ? (
+                        <div className="pp-not-found">
+                            <span>Post No.{preview.no} not found or deleted</span>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="pp-head">
+                                <span className="name">{preview.post.name}</span>
+                                <span className="dateblk">{preview.post.date}</span>
+                                <span className="no">No.{preview.post.no}</span>
+                                {preview.post.op && <span className="badge">OP</span>}
+                                {preview.post.sage && <span className="badge sage">SAGE</span>}
+                            </div>
+                            {preview.post.image && <img src={preview.post.image.url} alt="" className="pp-thumb" />}
+                            <div
+                                className="pp-comment"
+                                dangerouslySetInnerHTML={{
+                                    __html: preview.post.formattedComment || formatComment(preview.post.comment),
+                                }}
+                            />
+                        </>
+                    )}
                 </div>
             )}
         </>
     );
 }
+
+

@@ -13,8 +13,13 @@ export default async function BoardPage({ params }: { params: Promise<{ board: s
 
     const threads = await getThreads(board.slug);
 
+    const initialPosts = threads.flatMap(t => [
+        { ...t.op, threadNo: t.no, board: board.slug },
+        ...t.replies.map(r => ({ ...r, threadNo: t.no, board: board.slug })),
+    ]);
+
     return (
-        <ThreadClient board={board.slug}>
+        <ThreadClient board={board.slug} initialPosts={initialPosts}>
             <main className="wrap">
                 <nav className="breadcrumb">
                     <Link href="/">← Home</Link>
