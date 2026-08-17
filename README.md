@@ -30,7 +30,7 @@ You and your Idenitity vanish as soon as the thread ends. My motive to create th
 - Typescript
 - Redis
 
-I've used Nextjs App router and typescript for the project, with redis as the database, and for hosting the images I am using [uploadthing](https://uploadthing.com/) by the creator [Theo - t3.gg](https://twitter.com/theodavt) as an S3 Solution. Although in future I would probably be moving to cloudflare R2 since the speeds aren't he best here. I've been using upstash for my redis DB cause sweet free tier.
+I've used Nextjs App router and typescript for the project, with redis as the database, and for hosting the images I am using [uploadthing](https://uploadthing.com/) by the creator [Theo - t3.gg](https://www.youtube.com/@t3dotgg) as an S3 Solution. Although in future I would probably be moving to cloudflare R2 since the speeds aren't he best here. I've been using upstash for my redis DB cause sweet free tier.
 
 ## How it works
 
