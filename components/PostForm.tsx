@@ -17,7 +17,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
     const [isOpen, setIsOpen] = useState(false);
     const [targetBoard, setTargetBoard] = useState(board === "all" ? "b" : board);
     const [name, setName] = useState("Anonymous");
-    const [email, setEmail] = useState("");
+    const [sage, setSage] = useState(false);
     const [subject, setSubject] = useState("");
     const [comment, setComment] = useState("");
     const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
@@ -111,20 +111,19 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                 return;
             }
         }
-        const sage = /sage/i.test(email);
         const destBoard = board === "all" ? targetBoard : board;
         startTransition(async () => {
             try {
                 await addPostAction(destBoard, threadNo ?? null, {
                     name: name.trim() || "Anonymous",
-                    email,
                     subject,
                     comment,
-                    sage,
+                    sage: threadNo ? sage : false,
                     image: uploadedImage ? { url: uploadedImage.url, name: uploadedImage.name, size: uploadedImage.size } : undefined,
                 }, honeypot);
                 setComment("");
                 setSubject("");
+                setSage(false);
                 setUploadedImage(null);
                 setOriginalFileName("");
                 setHoneypot("");
@@ -224,14 +223,19 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                             <label>Name</label>
                             <input value={name} onChange={e => setName(e.target.value)} />
                         </div>
-                        <div className="field">
-                            <label>Email</label>
-                            <input
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="sage = don't bump"
-                            />
-                        </div>
+                        {threadNo && (
+                            <div className="field">
+                                <label className="checkbox-label" htmlFor="postform-sage">
+                                    <input
+                                        id="postform-sage"
+                                        type="checkbox"
+                                        checked={sage}
+                                        onChange={e => setSage(e.target.checked)}
+                                    />
+                                    <span>Sage <span className="tiny">(Don&apos;t bump)</span></span>
+                                </label>
+                            </div>
+                        )}
                         {!threadNo && (
                             <div className="field">
                                 <label>Subject</label>

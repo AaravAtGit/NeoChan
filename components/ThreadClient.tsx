@@ -92,7 +92,7 @@ export default function ThreadClient({
     const qrTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     const [name, setName] = useState("Anonymous");
-    const [email, setEmail] = useState("");
+    const [sage, setSage] = useState(false);
     const [comment, setComment] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [filePreview, setFilePreview] = useState("");
@@ -393,12 +393,10 @@ export default function ThreadClient({
             alert("COMMENT REQUIRED, ANON.");
             return;
         }
-        const sage = /sage/i.test(email);
         startTransition(async () => {
             try {
                 await addPostAction(board, threadNo, {
                     name: name.trim() || "Anonymous",
-                    email,
                     subject: "",
                     comment,
                     sage,
@@ -411,6 +409,7 @@ export default function ThreadClient({
                         : undefined,
                 });
                 setComment("");
+                setSage(false);
                 setFile(null);
                 setFilePreview("");
                 setQrOpen(false);
@@ -480,12 +479,14 @@ export default function ThreadClient({
                                     value={name}
                                     onChange={e => setName(e.target.value)}
                                 />
-                                <input
-                                    className="qr-input"
-                                    placeholder="Email / sage"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                />
+                                <label className="qr-checkbox-label" title="Sage (Don't bump thread)">
+                                    <input
+                                        type="checkbox"
+                                        checked={sage}
+                                        onChange={e => setSage(e.target.checked)}
+                                    />
+                                    <span>Sage</span>
+                                </label>
                             </div>
 
                             <textarea

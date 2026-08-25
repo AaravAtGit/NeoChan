@@ -35,7 +35,6 @@ export default function RulesPage() {
 
       <div className="divider"><i /></div>
 
-      {/* the rules */}
       <RulesAccordion rules={rules} />
 
       <div className="divider"><i /></div>
