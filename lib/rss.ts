@@ -3,23 +3,23 @@ import { getThreads } from "./store";
 
 function escapeXml(unsafe: string): string {
   return unsafe.replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case "<":
-        return "&lt;";
+  switch (c) {
+    case "<":
+      return "&lt;";
       case ">":
         return "&gt;";
-      case "&":
-        return "&amp;";
+        case "&":
+          return "&amp;";
       case "'":
         return "&apos;";
-      case '"':
-        return "&quot;";
-      default:
-        return c;
+        case '"':
+          return "&quot;";
+          default:
+            return c;
     }
   });
 }
-
+  
 function cleanCdata(text: string): string {
   return text.replace(/]]>/g, "]]]]><![CDATA[>");
 }

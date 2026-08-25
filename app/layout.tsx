@@ -7,6 +7,11 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "NeoChan — anonymous imageboard",
   description: "NeoChan. Be anonymous. Be brutal.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

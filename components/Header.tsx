@@ -1,5 +1,6 @@
 import { boards as allBoards } from "@/lib/boards";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Header({ current }: { current?: string }) {
     const boards = allBoards.slice(0, 10);
@@ -7,8 +8,17 @@ export default function Header({ current }: { current?: string }) {
         <>
             <header className="topbar">
                 <Link href="/" className="logo">
-                    <span className="bolt">⚡</span>
-                    Neo<b>Chan</b>
+                    <Image
+                        src="/logo.png"
+                        alt="NeoChan Logo"
+                        width={28}
+                        height={28}
+                        className="logo-img"
+                        priority
+                    />
+                    <span>
+                        Neo<b>Chan</b>
+                    </span>
                 </Link>
                 <nav className="boards">
                     {boards.map(b => (

@@ -85,9 +85,26 @@ button {
     display: flex;
     align-items: center;
     gap: 10px;
+    text-decoration: none;
+    user-select: none;
 }
 .logo b {
     color: var(--yellow);
+}
+.logo-img {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border: 2px solid var(--black);
+    box-shadow: 3px 3px 0 var(--red);
+    transform: rotate(-4deg);
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+    display: block;
+    flex-shrink: 0;
+}
+.logo:hover .logo-img {
+    transform: rotate(0deg) scale(1.08);
+    box-shadow: 4px 4px 0 var(--yellow);
 }
 .logo .bolt {
     background: var(--yellow);
