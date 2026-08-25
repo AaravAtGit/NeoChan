@@ -15,6 +15,10 @@ export function getBoard(slug: string): Board | undefined {
 
 
 export async function getThreads(board: string): Promise<Thread[]> {
+  if (board === "all") {
+    return getAllThreads();
+  }
+
   const threadNos: string[] = await redis.zrange(`board:${board}:threads`, 0, -1, { rev: true });
 
   if (threadNos.length === 0) return [];
@@ -52,9 +56,17 @@ export async function getThreads(board: string): Promise<Thread[]> {
   return threads;
 }
 
+export async function getAllThreads(): Promise<Thread[]> {
+  const regularBoards = boards.filter((b) => b.slug !== "all");
+  const threadsNested = await Promise.all(regularBoards.map((b) => getThreads(b.slug)));
+  const allThreads = threadsNested.flat();
+  allThreads.sort((a, b) => b.bumpedAt - a.bumpedAt);
+  return allThreads;
+}
+
 export async function getThread(board: string, no: number): Promise<Thread | undefined> {
   const meta = await redis.hgetall(`thread:${no}`) as Record<string, string> | null;
-  if (!meta || !meta.op || meta.board !== board) return undefined;
+  if (!meta || !meta.op || (board !== "all" && meta.board !== board)) return undefined;
 
   const rawReplies = await redis.lrange(`thread:${no}:replies`, 0, -1) as (string | Post)[];
 
@@ -89,6 +101,7 @@ export async function addPost(
   threadNo: number | null,
   post: Omit<Post, "no" | "op"> & { date?: string }
 ): Promise<Post> {
+  const actualBoard = board === "all" ? "b" : board;
   const postNo = await generatePostNo();
 
   const newPost: Post = {
@@ -107,7 +120,7 @@ export async function addPost(
     
     const threadMeta = {
       no: String(op.no),
-      board,
+      board: actualBoard,
       subject: post.subject ?? "UNTITLED",
       bumpedAt: String(now),
       op: JSON.stringify(op),
@@ -115,26 +128,26 @@ export async function addPost(
 
     const pipe = redis.pipeline();
     pipe.hset(`thread:${op.no}`, threadMeta);
-    pipe.zadd(`board:${board}:threads`, { score: now, member: String(op.no) });
-    pipe.set(`post:${op.no}:loc`, JSON.stringify({ board, threadNo: op.no }));
+    pipe.zadd(`board:${actualBoard}:threads`, { score: now, member: String(op.no) });
+    pipe.set(`post:${op.no}:loc`, JSON.stringify({ board: actualBoard, threadNo: op.no }));
     await pipe.exec();
 
-    const count = await redis.zcard(`board:${board}:threads`);
+    const count = await redis.zcard(`board:${actualBoard}:threads`);
     if (count > MAX_THREADS_PER_BOARD) {
       const excess = count - MAX_THREADS_PER_BOARD;
       const candidates: string[] = await redis.zrange(
-        `board:${board}:threads`,
+        `board:${actualBoard}:threads`,
         0,
-        excess + (board === "oc" ? 5 : 0)
+        excess + (actualBoard === "oc" ? 5 : 0)
       );
 
       // Hardcoding to reserve the OG Thread. 
       const toPrune = (
-        board === "oc" ? candidates.filter((no) => no !== "1" && Number(no) !== 1) : candidates
+        actualBoard === "oc" ? candidates.filter((no) => no !== "1" && Number(no) !== 1) : candidates
       ).slice(0, excess);
 
       for (const oldNo of toPrune) {
-        await deleteThread(board, oldNo);
+        await deleteThread(actualBoard, oldNo);
       }
     }
 
@@ -148,12 +161,12 @@ export async function addPost(
 
     const pipe = redis.pipeline();
     pipe.rpush(`thread:${threadNo}:replies`, JSON.stringify(newPost));
-    pipe.set(`post:${newPost.no}:loc`, JSON.stringify({ board, threadNo }));
+    pipe.set(`post:${newPost.no}:loc`, JSON.stringify({ board: actualBoard, threadNo }));
 
     if (!post.sage) {
       const now = Date.now();
       pipe.hset(`thread:${threadNo}`, { bumpedAt: String(now) });
-      pipe.zadd(`board:${board}:threads`, { score: now, member: String(threadNo) });
+      pipe.zadd(`board:${actualBoard}:threads`, { score: now, member: String(threadNo) });
     }
 
     await pipe.exec();

@@ -171,7 +171,6 @@ export default function ThreadClient({
     }, [isDragging]);
 
     useEffect(() => {
-        // Pre-fetch any missing quotes on the page in idle time
         const missingNos = new Set<string>();
         document.querySelectorAll("a.qlink").forEach(el => {
             const no = el.getAttribute("data-no") || el.textContent?.replace(/\D/g, "");
@@ -194,7 +193,7 @@ export default function ThreadClient({
                         postCache.current.set(no, data);
                     }
                 } catch {
-                    // Ignore background fetch aborts / errors
+                    console.log("errOwOrr");
                 }
             }
         };
@@ -246,7 +245,7 @@ export default function ThreadClient({
                 return;
             }
 
-            // 3. Fallback: Show instant loading frame while fetching
+            
             setPreview({ loading: true, no, x, y });
 
             try {

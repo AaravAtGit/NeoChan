@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addPostAction } from "@/lib/actions";
 import { UploadButton } from "@/lib/uploadthing";
+import { boards } from "@/lib/boards";
 
 type UploadedImage = {
     url: string;
@@ -14,6 +15,7 @@ type UploadedImage = {
 export default function PostForm({ board, threadNo }: { board: string; threadNo?: number }) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
+    const [targetBoard, setTargetBoard] = useState(board === "all" ? "b" : board);
     const [name, setName] = useState("Anonymous");
     const [email, setEmail] = useState("");
     const [subject, setSubject] = useState("");
@@ -110,9 +112,10 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
             }
         }
         const sage = /sage/i.test(email);
+        const destBoard = board === "all" ? targetBoard : board;
         startTransition(async () => {
             try {
-                await addPostAction(board, threadNo ?? null, {
+                await addPostAction(destBoard, threadNo ?? null, {
                     name: name.trim() || "Anonymous",
                     email,
                     subject,
@@ -150,7 +153,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     }}
                 >
                     <span className="pf-plus">+</span>
-                    <span>{threadNo ? `Post a Reply to No.${threadNo}` : `Start a New Thread on /${board}/`}</span>
+                    <span>{threadNo ? `Post a Reply to No.${threadNo}` : board === "all" ? "Start a New Thread" : `Start a New Thread on /${board}/`}</span>
                 </button>
                 <span className="pf-closed-hint">
                     {threadNo ? "Anonymous & Sage supported" : "Anonymous only (Image & comment required)"}
@@ -165,7 +168,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
             <div className="pf-body">
                 <div className="pf-title">
                     <span className="badge">{mode}</span>
-                    <span className="mono">{threadNo ? `No.${threadNo}` : `/${board}/`}</span>
+                    <span className="mono">{threadNo ? `No.${threadNo}` : board === "all" ? `/${targetBoard}/ (All Boards)` : `/${board}/`}</span>
                     <button
                         type="button"
                         className="btn small pf-close-btn"
@@ -187,6 +190,36 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                         aria-hidden="true"
                     />
                     <div>
+                        {board === "all" && !threadNo && (
+                            <div className="field">
+                                <label>Board (Required)</label>
+                                <select
+                                    value={targetBoard}
+                                    onChange={e => setTargetBoard(e.target.value)}
+                                    style={{
+                                        fontFamily: "var(--mono)",
+                                        fontWeight: 700,
+                                        padding: "8px 10px",
+                                        border: "2px solid var(--black)",
+                                        background: "var(--paper)",
+                                        color: "var(--black)",
+                                        outline: "none",
+                                        width: "100%",
+                                        fontSize: "12px",
+                                        boxShadow: "3px 3px 0 var(--black)",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {boards
+                                        .filter(b => b.slug !== "all")
+                                        .map(b => (
+                                            <option key={b.slug} value={b.slug}>
+                                                /{b.slug}/ — {b.title}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+                        )}
                         <div className="field">
                             <label>Name</label>
                             <input value={name} onChange={e => setName(e.target.value)} />

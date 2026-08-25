@@ -20,7 +20,7 @@ Acting a certain way which matches your character, constraining yourself.
 <br>
 
 Although NeoChan is different, you are an Anon just an ANON. NO SHAPE, NO IDENTITY. No personality. _**NO DIGITAL FOOTPRINT**_ <br>
-It provides you with freedom, Freedom of thought, Freedom of speech, Freedom from consequences. \_**Freedom to be yourself.**
+It provides you with freedom, Freedom of thought, Freedom of speech, Freedom from consequences. _**Freedom to be yourself.**_
 <br>
 You and your Idenitity vanish as soon as the thread ends. My motive to create this project was to bring the internet somewhat near to the shape it once was, The glory days.
 

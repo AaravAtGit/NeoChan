@@ -39,6 +39,8 @@ export async function addPostAction(
   await recordPostRateLimit(ip, isThread, input.comment);
 
   revalidatePath(`/${board}`);
+  revalidatePath(`/all`);
+  revalidatePath(`/`);
   if (threadNo) revalidatePath(`/${board}/${threadNo}`);
 }
 

@@ -12,6 +12,7 @@ export default function ThreadCard({
   thread: Thread;
   preview?: number;
 }) {
+  const threadBoard = thread.board || board;
   const shown = thread.replies.slice(-preview);
   const hidden = Math.max(0, thread.replies.length - preview);
 
@@ -20,7 +21,7 @@ export default function ThreadCard({
       className="thread-card"
       id={`p${thread.no}`}
       data-thread-no={thread.no}
-      data-board={board}
+      data-board={threadBoard}
     >
       <header className="op-head">
         <span className="chk">✓</span>
@@ -28,14 +29,24 @@ export default function ThreadCard({
         <span className="dateblk">{thread.op.date}</span>
         <span className="no">
           <Link
-            href={`/${board}/${thread.no}#p${thread.no}`}
+            href={`/${threadBoard}/${thread.no}#p${thread.no}`}
             title="Open thread"
           >
             No.{thread.no}
           </Link>
         </span>
+        {board === "all" && (
+          <Link
+            href={`/${threadBoard}`}
+            className="badge red"
+            style={{ textDecoration: "none" }}
+            title={`View /${threadBoard}/ board`}
+          >
+            /{threadBoard}/
+          </Link>
+        )}
         <span className="badge">OP</span>
-        <Link href={`/${board}/${thread.no}`} className="btn small">
+        <Link href={`/${threadBoard}/${thread.no}`} className="btn small">
           Reply →
         </Link>
         <div className="subj">{thread.subject}</div>
@@ -50,7 +61,7 @@ export default function ThreadCard({
       {hidden > 0 && (
         <p className="omitted">
           {hidden} post{hidden === 1 ? "" : "s"} omitted —{" "}
-          <Link href={`/${board}/${thread.no}`}>click to view all</Link>
+          <Link href={`/${threadBoard}/${thread.no}`}>click to view all</Link>
         </p>
       )}
       {shown.length > 0 && (
@@ -64,12 +75,12 @@ export default function ThreadCard({
           }}
         >
           {shown.map((r) => (
-            <article key={r.no} id={`p${r.no}`} className="reply" data-thread-no={thread.no} data-board={board}>
+            <article key={r.no} id={`p${r.no}`} className="reply" data-thread-no={thread.no} data-board={threadBoard}>
               <div className="rhead">
                 <span className="name">{r.name}</span>
                 <span className="dateblk">{r.date}</span>
                 <span className="no">
-                  <Link href={`/${board}/${thread.no}#p${r.no}`} data-no={r.no} className="post-no">
+                  <Link href={`/${threadBoard}/${thread.no}#p${r.no}`} data-no={r.no} className="post-no">
                     No.{r.no}
                   </Link>
                 </span>
@@ -89,3 +100,11 @@ export default function ThreadCard({
     </article>
   );
 }
+
+
+
+
+
+
+
+
