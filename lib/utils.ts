@@ -13,22 +13,15 @@ export function formatComment(raw: string): string {
 }
 
 export function extractQuotes(raw: string): number[] {
-  const matches = raw.match(/>>(\d+)/g);
-  if (!matches) return [];
-  const numbers = matches.map((m) => parseInt(m.slice(2), 10)).filter((n) => !Number.isNaN(n));
-  return Array.from(new Set(numbers));
+  const numbers = (raw.match(/>>(\d+)/g) ?? []).map((m) => Number(m.slice(2)));
+  return [...new Set(numbers)];
 }
 
 export function buildBacklinksMap(thread: { replies: { no: number; comment: string }[] }): Map<number, number[]> {
   const map = new Map<number, number[]>();
   for (const reply of thread.replies) {
-    const quotes = extractQuotes(reply.comment);
-    for (const q of quotes) {
-      const existing = map.get(q) ?? [];
-      if (!existing.includes(reply.no)) {
-        existing.push(reply.no);
-        map.set(q, existing);
-      }
+    for (const q of extractQuotes(reply.comment)) {
+      map.set(q, [...(map.get(q) ?? []), reply.no]);
     }
   }
   return map;

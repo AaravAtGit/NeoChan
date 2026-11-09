@@ -84,7 +84,7 @@ export default async function BoardPage({ params }: { params: Promise<{ board: s
 
                 {threads.length === 0 && (
                     <p style={{ color: "var(--paper)", fontFamily: "var(--mono)", fontWeight: 700 }}>
-                        3 NO THREADS YET. START THE FIRST ONE, ANON.
+                        NO THREADS YET. START THE FIRST ONE, ANON.
                     </p>
                 )}
 

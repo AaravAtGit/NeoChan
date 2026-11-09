@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FallbackImg from "./FallbackImg";
 
 interface PostImageProps {
   image: {
@@ -18,7 +19,7 @@ export default function PostImage({ image, isReply }: PostImageProps) {
 
   return (
     <figure className={`thumb ${isReply ? "reply-thumb" : ""} ${expanded ? "expanded" : ""}`}>
-      <img
+      <FallbackImg
         src={image.url}
         alt=""
         onClick={() => setExpanded((prev) => !prev)}

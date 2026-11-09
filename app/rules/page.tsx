@@ -22,7 +22,7 @@ export default function RulesPage() {
         <span className="badge">MANDATORY READING</span>
         <h1>Rules<small>of the Internet - 47 of them</small></h1>
         <p className="lead">
-          These aren't site policies. They're the laws of nature for anyone posting
+          These aren&apos;t site policies. They&apos;re the laws of nature for anyone posting
           anonymously online. Codified in 2006, refined through memetic warfare,
           still in force. Read them before you lurk. Lurk before you post.
         </p>
@@ -45,7 +45,7 @@ export default function RulesPage() {
         <p className="lead" style={{ color: "var(--paper)" }}>
           Rule 33 says it best. Before you post, read the thread. Before you start
           a thread, search the board. The internet is older than you think, and
-          your question has probably been answered before. If it hasn't -
+          your question has probably been answered before. If it hasn&apos;t -
           then you might actually have something worth posting.
         </p>
         <div style={{ marginTop: 24 }}>

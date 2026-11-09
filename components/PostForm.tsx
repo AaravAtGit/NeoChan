@@ -3,14 +3,24 @@
 import { useState, useTransition, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addPostAction } from "@/lib/actions";
-import { UploadButton } from "@/lib/uploadthing";
+import { UploadButton, formatFileSize, useUploadThing } from "@/lib/uploadthing";
+import { usePastedImage } from "@/lib/usePastedImage";
 import { boards } from "@/lib/boards";
+import { Post } from "@/lib/types";
 
-type UploadedImage = {
-    url: string;
-    name: string;
-    size: string;
-};
+type UploadedImage = NonNullable<Post["image"]>;
+
+function focusForm() {
+    setTimeout(() => {
+        const form = document.getElementById("postform");
+        form?.scrollIntoView({ behavior: "smooth", block: "center" });
+        form?.animate([{ outline: "4px solid var(--yellow)" }, { outline: "4px solid transparent" }], {
+            duration: 900,
+            easing: "ease-out",
+        });
+        document.querySelector<HTMLElement>(".postform textarea")?.focus();
+    }, 80);
+}
 
 export default function PostForm({ board, threadNo }: { board: string; threadNo?: number }) {
     const router = useRouter();
@@ -21,116 +31,84 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
     const [subject, setSubject] = useState("");
     const [comment, setComment] = useState("");
     const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
-    const [originalFileName, setOriginalFileName] = useState<string>("");
     const [honeypot, setHoneypot] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     const [isPending, startTransition] = useTransition();
 
-    const mode = threadNo ? "Reply" : "New Thread";
+    function handleUploaded(res?: { ufsUrl: string; name: string; size: number }[]) {
+        setIsUploading(false);
+        const f = res?.[0];
+        if (f) setUploadedImage({ url: f.ufsUrl, name: f.name, size: formatFileSize(f.size) });
+    }
+
+    function handleUploadError(err: { message: string }) {
+        setIsUploading(false);
+        alert(`Upload failed: ${err.message}`);
+    }
+
+    const { startUpload } = useUploadThing("imageUploader", {
+        onClientUploadComplete: handleUploaded,
+        onUploadError: handleUploadError,
+    });
+
+    usePastedImage(
+        isOpen && !isUploading,
+        target => !target.closest(".quick-reply-modal"),
+        file => {
+            setIsUploading(true);
+            startUpload([file]);
+        },
+    );
 
     useEffect(() => {
         function handleOpenPost() {
             setIsOpen(true);
-            setTimeout(() => {
-                const form = document.getElementById("postform") || document.querySelector<HTMLElement>(".postform, .pf-closed-bar");
-                if (form) {
-                    form.scrollIntoView({ behavior: "smooth", block: "center" });
-                    form.animate(
-                        [
-                            { outline: "4px solid var(--yellow)" },
-                            { outline: "4px solid transparent" },
-                        ],
-                        {
-                            duration: 900,
-                            easing: "ease-out",
-                        }
-                    );
-                }
-                const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-                    ".postform textarea, .postform input[type='text'], .postform input:not([type='file'])"
-                );
-                input?.focus();
-            }, 80);
+            focusForm();
         }
-
         window.addEventListener("neochan:open-post", handleOpenPost);
         return () => window.removeEventListener("neochan:open-post", handleOpenPost);
     }, []);
 
     useEffect(() => {
         if (!threadNo) return;
-
         function handleQuote(e: Event) {
-            const { no } = (e as CustomEvent<{ no: string }>).detail;
+            const insertion = `>>${(e as CustomEvent<{ no: string }>).detail.no}`;
             setIsOpen(true);
             setComment(c => {
-                const insertion = `>>${no}`;
                 const base = c.trim();
                 if (base.split(/\s+/).includes(insertion)) return c;
                 return (base ? base + "\n" : "") + insertion + " ";
             });
-            setTimeout(() => {
-                const form = document.getElementById("postform") || document.querySelector<HTMLElement>(".postform");
-                if (form) {
-                    form.scrollIntoView({ behavior: "smooth", block: "center" });
-                    form.animate([{ outline: "4px solid var(--yellow)" }, { outline: "4px solid transparent" }], {
-                        duration: 900,
-                        easing: "ease-out",
-                    });
-                }
-                const textarea = document.querySelector<HTMLTextAreaElement>(".postform textarea");
-                textarea?.focus();
-            }, 80);
+            focusForm();
         }
         window.addEventListener("neochan:quote", handleQuote);
         return () => window.removeEventListener("neochan:quote", handleQuote);
     }, [threadNo]);
 
-    async function submit(e: FormEvent) {
+    function submit(e: FormEvent) {
         e.preventDefault();
-        if (isUploading) {
-            alert("PLEASE WAIT FOR IMAGE TO FINISH UPLOADING, ANON.");
-            return;
-        }
-        if (!threadNo) {
-            if (!uploadedImage && !comment.trim()) {
-                alert("BOTH IMAGE AND COMMENT ARE REQUIRED TO START A THREAD, ANON.");
-                return;
-            }
-            if (!uploadedImage) {
-                alert("AN IMAGE IS REQUIRED TO START A THREAD, ANON.");
-                return;
-            }
-            if (!comment.trim()) {
-                alert("A COMMENT IS REQUIRED TO START A THREAD, ANON.");
-                return;
-            }
-        } else {
-            if (!comment.trim()) {
-                alert("COMMENT REQUIRED, ANON.");
-                return;
-            }
-        }
-        const destBoard = board === "all" ? targetBoard : board;
+        if (isUploading) return alert("PLEASE WAIT FOR IMAGE TO FINISH UPLOADING, ANON.");
+        if (!threadNo && !uploadedImage) return alert("AN IMAGE IS REQUIRED TO START A THREAD, ANON.");
+        if (!comment.trim()) return alert("COMMENT REQUIRED, ANON.");
+
         startTransition(async () => {
             try {
-                await addPostAction(destBoard, threadNo ?? null, {
+                await addPostAction(board === "all" ? targetBoard : board, threadNo ?? null, {
                     name: name.trim() || "Anonymous",
                     subject,
                     comment,
                     sage: threadNo ? sage : false,
-                    image: uploadedImage ? { url: uploadedImage.url, name: uploadedImage.name, size: uploadedImage.size } : undefined,
+                    image: uploadedImage ?? undefined,
                 }, honeypot);
                 setComment("");
                 setSubject("");
                 setSage(false);
                 setUploadedImage(null);
-                setOriginalFileName("");
                 setHoneypot("");
                 setIsOpen(false);
                 router.refresh();
-            } catch (err: any) {
-                alert(err?.message || "Failed to post");
+            } catch (err) {
+                alert(err instanceof Error ? err.message : "Failed to post");
             }
         });
     }
@@ -143,12 +121,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     className="btn yellow pf-toggle-btn"
                     onClick={() => {
                         setIsOpen(true);
-                        setTimeout(() => {
-                            const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-                                ".postform textarea, .postform input"
-                            );
-                            el?.focus();
-                        }, 100);
+                        focusForm();
                     }}
                 >
                     <span className="pf-plus">+</span>
@@ -166,24 +139,19 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
             <div className="hazard" style={{ borderBottom: "var(--bd)" }} />
             <div className="pf-body">
                 <div className="pf-title">
-                    <span className="badge">{mode}</span>
+                    <span className="badge">{threadNo ? "Reply" : "New Thread"}</span>
                     <span className="mono">{threadNo ? `No.${threadNo}` : board === "all" ? `/${targetBoard}/ (All Boards)` : `/${board}/`}</span>
-                    <button
-                        type="button"
-                        className="btn small pf-close-btn"
-                        onClick={() => setIsOpen(false)}
-                    >
+                    <button type="button" className="btn small pf-close-btn" onClick={() => setIsOpen(false)}>
                         ✕ Close Form
                     </button>
                 </div>
                 <div className="pf-grid">
-
                     <input
                         type="text"
                         name="website"
                         value={honeypot}
                         onChange={e => setHoneypot(e.target.value)}
-                        style={{ display: "none", position: "absolute", left: "-9999px" }}
+                        style={{ display: "none" }}
                         tabIndex={-1}
                         autoComplete="off"
                         aria-hidden="true"
@@ -192,23 +160,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                         {board === "all" && !threadNo && (
                             <div className="field">
                                 <label>Board (Required)</label>
-                                <select
-                                    value={targetBoard}
-                                    onChange={e => setTargetBoard(e.target.value)}
-                                    style={{
-                                        fontFamily: "var(--mono)",
-                                        fontWeight: 700,
-                                        padding: "8px 10px",
-                                        border: "2px solid var(--black)",
-                                        background: "var(--paper)",
-                                        color: "var(--black)",
-                                        outline: "none",
-                                        width: "100%",
-                                        fontSize: "12px",
-                                        boxShadow: "3px 3px 0 var(--black)",
-                                        cursor: "pointer",
-                                    }}
-                                >
+                                <select className="pf-select" value={targetBoard} onChange={e => setTargetBoard(e.target.value)}>
                                     {boards
                                         .filter(b => b.slug !== "all")
                                         .map(b => (
@@ -223,7 +175,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                             <label>Name</label>
                             <input value={name} onChange={e => setName(e.target.value)} />
                         </div>
-                        {threadNo && (
+                        {threadNo ? (
                             <div className="field">
                                 <label className="checkbox-label" htmlFor="postform-sage">
                                     <input
@@ -235,33 +187,22 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                                     <span>Sage <span className="tiny">(Don&apos;t bump)</span></span>
                                 </label>
                             </div>
-                        )}
-                        {!threadNo && (
+                        ) : (
                             <div className="field">
                                 <label>Subject</label>
-                                <input
-                                    value={subject}
-                                    onChange={e => setSubject(e.target.value)}
-                                    placeholder="THREAD SUBJECT"
-                                />
+                                <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="THREAD SUBJECT" />
                             </div>
                         )}
                         <div className="field filebox">
-                            <label>Image {!threadNo ? "(Required)" : "(Optional)"}</label>
+                            <label>Image {threadNo ? "(Optional)" : "(Required)"}</label>
                             {uploadedImage ? (
                                 <div className="pf-uploaded">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={uploadedImage.url} className="pf-preview" alt="" />
                                     <div className="pf-upload-info">
                                         <span className="mono" title={uploadedImage.name}>{uploadedImage.name}</span>
                                         <span className="tiny">{uploadedImage.size}</span>
-                                        <button
-                                            type="button"
-                                            className="btn small"
-                                            onClick={() => {
-                                                setUploadedImage(null);
-                                                setOriginalFileName("");
-                                            }}
-                                        >
+                                        <button type="button" className="btn small" onClick={() => setUploadedImage(null)}>
                                             ✕ Remove
                                         </button>
                                     </div>
@@ -269,31 +210,9 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                             ) : (
                                 <UploadButton
                                     endpoint="imageUploader"
-                                    onBeforeUploadBegin={(files) => {
-                                        if (files && files[0]) {
-                                            setOriginalFileName(files[0].name);
-                                        }
-                                        return files;
-                                    }}
                                     onUploadBegin={() => setIsUploading(true)}
-                                    onClientUploadComplete={(res) => {
-                                        setIsUploading(false);
-                                        if (res && res[0]) {
-                                            const f = res[0];
-                                            const sizeStr = f.size < 1024 * 1024
-                                                ? `${Math.round(f.size / 1024)} KB`
-                                                : `${(f.size / (1024 * 1024)).toFixed(1)} MB`;
-                                            setUploadedImage({
-                                                url: f.ufsUrl,
-                                                name: originalFileName || f.name,
-                                                size: sizeStr,
-                                            });
-                                        }
-                                    }}
-                                    onUploadError={(err) => {
-                                        setIsUploading(false);
-                                        alert(`Upload failed: ${err.message}`);
-                                    }}
+                                    onClientUploadComplete={handleUploaded}
+                                    onUploadError={handleUploadError}
                                     appearance={{
                                         button: {
                                             background: "var(--black)",
@@ -308,19 +227,14 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                                             cursor: "pointer",
                                         },
                                         allowedContent: {
-                                            color: "var(--paper)",
+                                            color: "var(--black)",
                                             fontFamily: "var(--mono)",
                                             fontSize: "10px",
-                                            opacity: 0.6,
                                         },
                                     }}
                                     content={{
-                                        button({ isUploading: uploading }) {
-                                            return uploading ? "Uploading…" : "Choose Image";
-                                        },
-                                        allowedContent() {
-                                            return "Images up to 4MB";
-                                        },
+                                        button: ({ isUploading }) => (isUploading ? "Uploading…" : "Choose Image"),
+                                        allowedContent: () => "Images up to 4MB, or paste one (Ctrl+V)",
                                     }}
                                 />
                             )}
@@ -344,11 +258,7 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
                     <button className="btn yellow" disabled={isPending || isUploading}>
                         {isPending ? "Posting…" : isUploading ? "Wait for upload…" : "Post It"}
                     </button>
-                    <button
-                        type="button"
-                        className="btn small pf-cancel-btn"
-                        onClick={() => setIsOpen(false)}
-                    >
+                    <button type="button" className="btn small pf-cancel-btn" onClick={() => setIsOpen(false)}>
                         Cancel
                     </button>
                 </div>
@@ -356,4 +266,3 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
         </form>
     );
 }
-

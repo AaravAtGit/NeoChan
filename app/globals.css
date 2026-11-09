@@ -106,18 +106,6 @@ button {
     transform: rotate(0deg) scale(1.08);
     box-shadow: 4px 4px 0 var(--yellow);
 }
-.logo .bolt {
-    background: var(--yellow);
-    color: var(--black);
-    border: 2px solid var(--black);
-    box-shadow: 3px 3px 0 var(--red);
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    font-size: 16px;
-    transform: rotate(-4deg);
-}
 .boards {
     display: flex;
     flex-wrap: wrap;
@@ -1009,6 +997,19 @@ button {
     min-height: 130px;
     resize: vertical;
 }
+.pf-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid var(--black);
+    background: var(--paper);
+    color: var(--black);
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 12px;
+    box-shadow: 3px 3px 0 var(--black);
+    outline: none;
+    cursor: pointer;
+}
 .checkbox-label {
     display: flex !important;
     align-items: center;
@@ -1215,7 +1216,6 @@ button {
     }
 }
 
-/* ======= hover preview popup ======= */
 .preview-popup {
     position: fixed;
     z-index: 1000;
@@ -1540,6 +1540,11 @@ button {
     font-family: var(--mono);
     font-size: 10px;
     flex: 1;
+}
+.qr-paste-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #6b6257;
 }
 .qr-preview-wrapper {
     position: relative;

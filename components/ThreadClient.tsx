@@ -2,9 +2,12 @@
 
 import { addPostAction } from "@/lib/actions";
 import { Post } from "@/lib/types";
+import { formatFileSize, useUploadThing } from "@/lib/uploadthing";
+import { usePastedImage } from "@/lib/usePastedImage";
 import { formatComment } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import FallbackImg from "./FallbackImg";
 
 type PostWithContext = Post & {
     threadNo?: number;
@@ -65,22 +68,10 @@ export default function ThreadClient({
     const [preview, setPreview] = useState<PreviewState>(null);
     const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const activeNo = useRef<string | null>(null);
-    const postCache = useRef<Map<string, PostWithContext>>(null!);
-    if (!postCache.current) {
-        postCache.current = new Map();
-        if (initialPosts) {
-            for (const p of initialPosts) {
-                postCache.current.set(String(p.no), p);
-            }
-        }
-    }
+    const postCache = useRef(new Map<string, PostWithContext>());
 
     useEffect(() => {
-        if (initialPosts) {
-            for (const p of initialPosts) {
-                postCache.current.set(String(p.no), p);
-            }
-        }
+        for (const p of initialPosts ?? []) postCache.current.set(String(p.no), p);
     }, [initialPosts]);
 
     const [qrOpen, setQrOpen] = useState(false);
@@ -94,9 +85,22 @@ export default function ThreadClient({
     const [name, setName] = useState("Anonymous");
     const [sage, setSage] = useState(false);
     const [comment, setComment] = useState("");
-    const [file, setFile] = useState<File | null>(null);
-    const [filePreview, setFilePreview] = useState("");
+    const [qrImage, setQrImage] = useState<NonNullable<Post["image"]> | null>(null);
     const [isPending, startTransition] = useTransition();
+
+    const { startUpload, isUploading } = useUploadThing("imageUploader", {
+        onClientUploadComplete: res => {
+            const f = res?.[0];
+            if (f) setQrImage({ url: f.ufsUrl, name: f.name, size: formatFileSize(f.size) });
+        },
+        onUploadError: err => alert(`Upload failed: ${err.message}`),
+    });
+
+    usePastedImage(
+        qrOpen && !qrMinimized && !isUploading,
+        target => !!target.closest(".quick-reply-modal") || !document.querySelector(".postform"),
+        pasted => startUpload([pasted]),
+    );
 
     const clearHideTimer = useCallback(() => {
         if (hideTimer.current) {
@@ -198,19 +202,18 @@ export default function ThreadClient({
             }
         };
 
-        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-            const id = (window as any).requestIdleCallback(() => fetchMissing());
+        if ("requestIdleCallback" in window) {
+            const id = requestIdleCallback(fetchMissing);
             return () => {
                 controller.abort();
-                if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
-            };
-        } else {
-            const timer = setTimeout(fetchMissing, 300);
-            return () => {
-                controller.abort();
-                clearTimeout(timer);
+                cancelIdleCallback(id);
             };
         }
+        const timer = setTimeout(fetchMissing, 300);
+        return () => {
+            controller.abort();
+            clearTimeout(timer);
+        };
     }, [board, threadNo, initialPosts]);
 
     useEffect(() => {
@@ -230,22 +233,13 @@ export default function ThreadClient({
             }
             if (y < 10) y = 10;
 
-            // 1. Instant check in memory cache
-            if (postCache.current.has(no)) {
-                const cachedPost = postCache.current.get(no)!;
-                setPreview({ post: cachedPost, no, x, y, loading: false });
+            const known = postCache.current.get(no) ?? getPostFromDOM(no, board, threadNo);
+            if (known) {
+                postCache.current.set(no, known);
+                setPreview({ post: known, no, x, y, loading: false });
                 return;
             }
 
-            // 2. Instant check in current DOM
-            const domPost = getPostFromDOM(no, board, threadNo);
-            if (domPost) {
-                postCache.current.set(no, domPost);
-                setPreview({ post: domPost, no, x, y, loading: false });
-                return;
-            }
-
-            
             setPreview({ loading: true, no, x, y });
 
             try {
@@ -379,11 +373,7 @@ export default function ThreadClient({
 
     function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const f = e.target.files?.[0];
-        if (!f) return;
-        setFile(f);
-        const r = new FileReader();
-        r.onload = () => setFilePreview(r.result as string);
-        r.readAsDataURL(f);
+        if (f) startUpload([f]);
     }
 
     async function submitQr(e: FormEvent) {
@@ -400,22 +390,15 @@ export default function ThreadClient({
                     subject: "",
                     comment,
                     sage,
-                    image: file
-                        ? {
-                              url: filePreview,
-                              name: file.name,
-                              size: `${Math.round(file.size / 1024)} KB`,
-                          }
-                        : undefined,
+                    image: qrImage ?? undefined,
                 });
                 setComment("");
                 setSage(false);
-                setFile(null);
-                setFilePreview("");
+                setQrImage(null);
                 setQrOpen(false);
                 router.refresh();
-            } catch (err: any) {
-                alert(err?.message || "Failed to post reply");
+            } catch (err) {
+                alert(err instanceof Error ? err.message : "Failed to post reply");
             }
         });
     }
@@ -499,16 +482,13 @@ export default function ThreadClient({
 
                             <div className="qr-file-row">
                                 <input type="file" accept="image/*" onChange={onFileChange} className="qr-file-input" />
-                                {filePreview && (
+                                {qrImage && (
                                     <div className="qr-preview-wrapper">
-                                        <img src={filePreview} alt="" className="qr-thumb" />
+                                        <img src={qrImage.url} alt="" className="qr-thumb" />
                                         <button
                                             type="button"
                                             className="qr-thumb-remove"
-                                            onClick={() => {
-                                                setFile(null);
-                                                setFilePreview("");
-                                            }}
+                                            onClick={() => setQrImage(null)}
                                             title="Remove image"
                                         >
                                             ✕
@@ -516,24 +496,18 @@ export default function ThreadClient({
                                     </div>
                                 )}
                             </div>
+                            <span className="tiny qr-paste-hint">
+                                {isUploading ? "Uploading image…" : "Or paste an image (Ctrl+V)"}
+                            </span>
 
                             <div className="qr-actions">
-                                <button type="submit" className="btn yellow small" disabled={isPending}>
-                                    {isPending ? "Posting…" : "Post Reply"}
+                                <button type="submit" className="btn yellow small" disabled={isPending || isUploading}>
+                                    {isPending ? "Posting…" : isUploading ? "Uploading…" : "Post Reply"}
                                 </button>
                                 <button
                                     type="button"
                                     className="qr-link-scroll"
-                                    onClick={() => {
-                                        window.dispatchEvent(new CustomEvent("neochan:quote", { detail: { no: "" } }));
-                                        setTimeout(() => {
-                                            const el = document.querySelector(".postform");
-                                            if (el) {
-                                                el.scrollIntoView({ behavior: "smooth", block: "center" });
-                                                el.querySelector("textarea")?.focus();
-                                            }
-                                        }, 50);
-                                    }}
+                                    onClick={() => window.dispatchEvent(new Event("neochan:open-post"))}
                                 >
                                     Go to bottom form ↓
                                 </button>
@@ -568,7 +542,7 @@ export default function ThreadClient({
                                 {preview.post.op && <span className="badge">OP</span>}
                                 {preview.post.sage && <span className="badge sage">SAGE</span>}
                             </div>
-                            {preview.post.image && <img src={preview.post.image.url} alt="" className="pp-thumb" />}
+                            {preview.post.image && <FallbackImg src={preview.post.image.url} alt="" className="pp-thumb" />}
                             <div
                                 className="pp-comment"
                                 dangerouslySetInnerHTML={{
@@ -582,5 +556,3 @@ export default function ThreadClient({
         </>
     );
 }
-
-

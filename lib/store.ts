@@ -1,96 +1,66 @@
-import { Board, Post, Thread } from "./types";
-import { boards, getBoardBySlug } from "./boards";
+import { Post, Thread } from "./types";
+import { boards } from "./boards";
 import { redis } from "./redis";
 
 const MAX_THREADS_PER_BOARD = 67;
 
+type ThreadMeta = Record<string, string> | null;
+type Loc = { board: string; threadNo: number };
 
-export function getBoards(): Board[] {
-  return boards;
+// Upstash auto-deserializes JSON, so values may come back as strings or objects.
+function parse<T>(v: string | T): T {
+  return typeof v === "string" ? JSON.parse(v) : v;
 }
 
-export function getBoard(slug: string): Board | undefined {
-  return getBoardBySlug(slug);
-}
-
-
-export async function getThreads(board: string): Promise<Thread[]> {
-  if (board === "all") {
-    return getAllThreads();
-  }
-
-  const threadNos: string[] = await redis.zrange(`board:${board}:threads`, 0, -1, { rev: true });
-
-  if (threadNos.length === 0) return [];
-
-  const pipeline = redis.pipeline();
-  for (const no of threadNos) {
-    pipeline.hgetall(`thread:${no}`);
-    pipeline.lrange(`thread:${no}:replies`, 0, -1);
-  }
-
-  const results = await pipeline.exec();
-
-  const threads: Thread[] = [];
-  for (let i = 0; i < threadNos.length; i++) {
-    const meta = results[i * 2] as Record<string, string> | null;
-    const rawReplies = results[i * 2 + 1] as (string | Post)[] | null;
-
-    if (!meta || !meta.op) continue;
-
-    const op: Post = typeof meta.op === "string" ? JSON.parse(meta.op) : meta.op;
-    const replies: Post[] = (rawReplies ?? []).map((r) =>
-      typeof r === "string" ? JSON.parse(r) : r
-    );
-
-    threads.push({
-      no: Number(meta.no),
-      board: meta.board as string,
-      subject: meta.subject as string,
-      op,
-      replies,
-      bumpedAt: Number(meta.bumpedAt),
-    });
-  }
-
-  return threads;
-}
-
-export async function getAllThreads(): Promise<Thread[]> {
-  const regularBoards = boards.filter((b) => b.slug !== "all");
-  const threadsNested = await Promise.all(regularBoards.map((b) => getThreads(b.slug)));
-  const allThreads = threadsNested.flat();
-  allThreads.sort((a, b) => b.bumpedAt - a.bumpedAt);
-  return allThreads;
-}
-
-export async function getThread(board: string, no: number): Promise<Thread | undefined> {
-  const meta = await redis.hgetall(`thread:${no}`) as Record<string, string> | null;
-  if (!meta || !meta.op || (board !== "all" && meta.board !== board)) return undefined;
-
-  const rawReplies = await redis.lrange(`thread:${no}:replies`, 0, -1) as (string | Post)[];
-
-  const op: Post = typeof meta.op === "string" ? JSON.parse(meta.op) : meta.op;
-  const replies: Post[] = rawReplies.map((r) =>
-    typeof r === "string" ? JSON.parse(r) : r
-  );
-
+function toThread(meta: ThreadMeta, rawReplies: (string | Post)[] | null): Thread | undefined {
+  if (!meta?.op) return undefined;
   return {
     no: Number(meta.no),
-    board: meta.board as string,
-    subject: meta.subject as string,
-    op,
-    replies,
+    board: meta.board,
+    subject: meta.subject,
+    op: parse<Post>(meta.op),
+    replies: (rawReplies ?? []).map((r) => parse<Post>(r)),
     bumpedAt: Number(meta.bumpedAt),
   };
 }
 
+export async function getThreads(board: string): Promise<Thread[]> {
+  if (board === "all") return getAllThreads();
+
+  const threadNos: string[] = await redis.zrange(`board:${board}:threads`, 0, -1, { rev: true });
+  if (threadNos.length === 0) return [];
+
+  const pipe = redis.pipeline();
+  for (const no of threadNos) {
+    pipe.hgetall(`thread:${no}`);
+    pipe.lrange(`thread:${no}:replies`, 0, -1);
+  }
+  const results = await pipe.exec();
+
+  const threads: Thread[] = [];
+  for (let i = 0; i < threadNos.length; i++) {
+    const t = toThread(results[i * 2] as ThreadMeta, results[i * 2 + 1] as (string | Post)[] | null);
+    if (t) threads.push(t);
+  }
+  return threads;
+}
+
+async function getAllThreads(): Promise<Thread[]> {
+  const nested = await Promise.all(boards.filter((b) => b.slug !== "all").map((b) => getThreads(b.slug)));
+  return nested.flat().sort((a, b) => b.bumpedAt - a.bumpedAt);
+}
+
+export async function getThread(board: string, no: number): Promise<Thread | undefined> {
+  const meta = (await redis.hgetall(`thread:${no}`)) as ThreadMeta;
+  if (!meta?.op || (board !== "all" && meta.board !== board)) return undefined;
+  const replies = (await redis.lrange(`thread:${no}:replies`, 0, -1)) as (string | Post)[];
+  return toThread(meta, replies);
+}
 
 async function generatePostNo(): Promise<number> {
   for (let i = 0; i < 20; i++) {
     const candidate = Math.floor(1000 + Math.random() * 9000);
-    const exists = await redis.exists(`post:${candidate}:loc`);
-    if (!exists) return candidate;
+    if (!(await redis.exists(`post:${candidate}:loc`))) return candidate;
   }
   const count = await redis.incr("global:nextNo");
   return 1000 + (count % 9000);
@@ -99,149 +69,70 @@ async function generatePostNo(): Promise<number> {
 export async function addPost(
   board: string,
   threadNo: number | null,
-  post: Omit<Post, "no" | "op"> & { date?: string }
+  post: Omit<Post, "no" | "op">
 ): Promise<Post> {
   const actualBoard = board === "all" ? "b" : board;
-  const postNo = await generatePostNo();
-
-  const newPost: Post = {
-    ...post,
-    no: postNo,
-    date: post.date ?? new Date().toLocaleString("en-US", { hour12: false }),
-    op: false,
-  };
+  const newPost: Post = { ...post, no: await generatePostNo(), op: threadNo === null };
+  const now = Date.now();
 
   if (threadNo === null) {
-    if (!post.comment?.trim() || !post.image) {
-      throw new Error("Both image and comment are required to create a new thread.");
-    }
-    const op: Post = { ...newPost, op: true };
-    const now = Date.now();
-    
-    const threadMeta = {
-      no: String(op.no),
+    const pipe = redis.pipeline();
+    pipe.hset(`thread:${newPost.no}`, {
+      no: String(newPost.no),
       board: actualBoard,
       subject: post.subject ?? "UNTITLED",
       bumpedAt: String(now),
-      op: JSON.stringify(op),
-    };
-
-    const pipe = redis.pipeline();
-    pipe.hset(`thread:${op.no}`, threadMeta);
-    pipe.zadd(`board:${actualBoard}:threads`, { score: now, member: String(op.no) });
-    pipe.set(`post:${op.no}:loc`, JSON.stringify({ board: actualBoard, threadNo: op.no }));
+      op: JSON.stringify(newPost),
+    });
+    pipe.zadd(`board:${actualBoard}:threads`, { score: now, member: String(newPost.no) });
+    pipe.set(`post:${newPost.no}:loc`, JSON.stringify({ board: actualBoard, threadNo: newPost.no }));
     await pipe.exec();
 
-    const count = await redis.zcard(`board:${actualBoard}:threads`);
-    if (count > MAX_THREADS_PER_BOARD) {
-      const excess = count - MAX_THREADS_PER_BOARD;
-      const candidates: string[] = await redis.zrange(
-        `board:${actualBoard}:threads`,
-        0,
-        excess + (actualBoard === "oc" ? 5 : 0)
-      );
-
-      // Hardcoding to reserve the OG Thread. 
-      const toPrune = (
-        actualBoard === "oc" ? candidates.filter((no) => no !== "1" && Number(no) !== 1) : candidates
-      ).slice(0, excess);
-
-      for (const oldNo of toPrune) {
-        await deleteThread(actualBoard, oldNo);
-      }
-    }
-
-    return op;
-  } else {
-    if (!post.comment?.trim()) {
-      throw new Error("Comment is required for replies.");
-    }
-    const exists = await redis.exists(`thread:${threadNo}`);
-    if (!exists) throw new Error("thread not found");
-
-    const pipe = redis.pipeline();
-    pipe.rpush(`thread:${threadNo}:replies`, JSON.stringify(newPost));
-    pipe.set(`post:${newPost.no}:loc`, JSON.stringify({ board: actualBoard, threadNo }));
-
-    if (!post.sage) {
-      const now = Date.now();
-      pipe.hset(`thread:${threadNo}`, { bumpedAt: String(now) });
-      pipe.zadd(`board:${actualBoard}:threads`, { score: now, member: String(threadNo) });
-    }
-
-    await pipe.exec();
+    await pruneBoard(actualBoard);
     return newPost;
   }
+
+  if (!(await redis.exists(`thread:${threadNo}`))) throw new Error("Thread not found.");
+
+  const pipe = redis.pipeline();
+  pipe.rpush(`thread:${threadNo}:replies`, JSON.stringify(newPost));
+  pipe.set(`post:${newPost.no}:loc`, JSON.stringify({ board: actualBoard, threadNo }));
+  if (!post.sage) {
+    pipe.hset(`thread:${threadNo}`, { bumpedAt: String(now) });
+    pipe.zadd(`board:${actualBoard}:threads`, { score: now, member: String(threadNo) });
+  }
+  await pipe.exec();
+  return newPost;
 }
 
+async function pruneBoard(board: string): Promise<void> {
+  const count = await redis.zcard(`board:${board}:threads`);
+  if (count <= MAX_THREADS_PER_BOARD) return;
+  const oldest: string[] = await redis.zrange(`board:${board}:threads`, 0, count - MAX_THREADS_PER_BOARD - 1);
+  for (const no of oldest) await deleteThread(board, no);
+}
 
 async function deleteThread(board: string, threadNo: string): Promise<void> {
-  // Hardcoded rule: Never delete thread/post No. 1 on /oc/
-  if (board === "oc" && (String(threadNo) === "1" || Number(threadNo) === 1)) {
-    return;
-  }
-
-  const rawReplies = await redis.lrange(`thread:${threadNo}:replies`, 0, -1) as (string | Post)[];
-  const replyNos: number[] = rawReplies.map((r) => {
-    const parsed: Post = typeof r === "string" ? JSON.parse(r) : r;
-    return parsed.no;
-  });
+  const rawReplies = (await redis.lrange(`thread:${threadNo}:replies`, 0, -1)) as (string | Post)[];
 
   const pipe = redis.pipeline();
   pipe.zrem(`board:${board}:threads`, threadNo);
-  pipe.del(`thread:${threadNo}`);
-  pipe.del(`thread:${threadNo}:replies`);
-  pipe.del(`post:${threadNo}:loc`);
-  for (const rNo of replyNos) {
-    if (board === "oc" && (String(rNo) === "1" || Number(rNo) === 1)) {
-      continue;
-    }
-    pipe.del(`post:${rNo}:loc`);
-  }
+  pipe.del(`thread:${threadNo}`, `thread:${threadNo}:replies`, `post:${threadNo}:loc`);
+  for (const r of rawReplies) pipe.del(`post:${parse<Post>(r).no}:loc`);
   await pipe.exec();
 }
 
-
-export async function getPostByNo(no: number): Promise<Post | undefined> {
-  const loc = await redis.get(`post:${no}:loc`) as string | { board: string; threadNo: number } | null;
-  if (!loc) return undefined;
-
-  const { threadNo } = typeof loc === "string" ? JSON.parse(loc) : loc;
+export async function getPostWithContext(no: number): Promise<(Post & Loc) | undefined> {
+  const raw = (await redis.get(`post:${no}:loc`)) as string | Loc | null;
+  if (!raw) return undefined;
+  const { board, threadNo } = parse<Loc>(raw);
 
   if (threadNo === no) {
-    const meta = await redis.hgetall(`thread:${no}`) as Record<string, string> | null;
-    if (!meta?.op) return undefined;
-    return typeof meta.op === "string" ? JSON.parse(meta.op) : meta.op;
+    const meta = (await redis.hgetall(`thread:${no}`)) as ThreadMeta;
+    return meta?.op ? { ...parse<Post>(meta.op), threadNo, board } : undefined;
   }
 
-  const rawReplies = await redis.lrange(`thread:${threadNo}:replies`, 0, -1) as (string | Post)[];
-  for (const r of rawReplies) {
-    const parsed: Post = typeof r === "string" ? JSON.parse(r) : r;
-    if (parsed.no === no) return parsed;
-  }
-
-  return undefined;
+  const rawReplies = (await redis.lrange(`thread:${threadNo}:replies`, 0, -1)) as (string | Post)[];
+  const post = rawReplies.map((r) => parse<Post>(r)).find((p) => p.no === no);
+  return post && { ...post, threadNo, board };
 }
-
-export async function getPostWithContext(no: number): Promise<(Post & { threadNo: number; board: string }) | undefined> {
-  const loc = await redis.get(`post:${no}:loc`) as string | { board: string; threadNo: number } | null;
-  if (!loc) return undefined;
-
-  const { board, threadNo } = typeof loc === "string" ? JSON.parse(loc) : loc;
-
-  if (threadNo === no) {
-    const meta = await redis.hgetall(`thread:${no}`) as Record<string, string> | null;
-    if (!meta?.op) return undefined;
-    const op: Post = typeof meta.op === "string" ? JSON.parse(meta.op) : meta.op;
-    return { ...op, threadNo, board };
-  }
-
-  const rawReplies = await redis.lrange(`thread:${threadNo}:replies`, 0, -1) as (string | Post)[];
-  for (const r of rawReplies) {
-    const parsed: Post = typeof r === "string" ? JSON.parse(r) : r;
-    if (parsed.no === no) return { ...parsed, threadNo, board };
-  }
-
-  return undefined;
-}
-

@@ -11,36 +11,19 @@ export async function addPostAction(
   input: Omit<Post, "no" | "date" | "op">,
   honeypot?: string
 ) {
-  if (honeypot && honeypot.trim().length > 0) {
-    throw new Error("Bot activity detected.");
-  }
+  if (honeypot?.trim()) throw new Error("Bot activity detected.");
 
   const isThread = threadNo === null;
-
-  if (isThread) {
-    if (!input.comment?.trim() || !input.image) {
-      throw new Error("Both image and comment are required for creating new threads.");
-    }
-  } else {
-    if (!input.comment?.trim()) {
-      throw new Error("Comment is required for replies.");
-    }
-  }
+  if (!input.comment?.trim()) throw new Error("Comment is required.");
+  if (isThread && !input.image) throw new Error("An image is required to start a thread.");
 
   const ip = await getClientIp();
-
-  
   await checkPostRateLimit(ip, isThread, input.comment);
-
-  const serverStamp = nowStamp();
-  await addPost(board, threadNo, { ...input, date: serverStamp });
-
- 
+  await addPost(board, threadNo, { ...input, date: nowStamp() });
   await recordPostRateLimit(ip, isThread, input.comment);
 
   revalidatePath(`/${board}`);
-  revalidatePath(`/all`);
-  revalidatePath(`/`);
+  revalidatePath("/all");
+  revalidatePath("/");
   if (threadNo) revalidatePath(`/${board}/${threadNo}`);
 }
-

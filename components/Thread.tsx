@@ -1,12 +1,11 @@
 import { Thread as ThreadType } from "@/lib/types";
 import { formatComment, buildBacklinksMap } from "@/lib/utils";
-import Reply from "./Reply";
+import Reply, { Backlinks } from "./Reply";
 import PostImage from "./PostImage";
 
 export default function Thread({ thread }: { thread: ThreadType }) {
   const op = thread.op;
   const backlinksMap = buildBacklinksMap(thread);
-  const opBacklinks = backlinksMap.get(op.no) ?? [];
 
   return (
     <article className="thread-card thread-page" id={`p${op.no}`}>
@@ -34,16 +33,7 @@ export default function Thread({ thread }: { thread: ThreadType }) {
             className="comment"
             dangerouslySetInnerHTML={{ __html: formatComment(op.comment) }}
           />
-          {opBacklinks.length > 0 && (
-            <div className="backlinks">
-              <span>Replies:</span>
-              {opBacklinks.map((no) => (
-                <a key={no} className="qlink" data-no={no} href={`#p${no}`}>
-                  &gt;&gt;{no}
-                </a>
-              ))}
-            </div>
-          )}
+          <Backlinks nos={backlinksMap.get(op.no) ?? []} />
         </div>
       </div>
       <div className="replies">

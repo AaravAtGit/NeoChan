@@ -33,18 +33,23 @@ export default function Reply({
             className="comment"
             dangerouslySetInnerHTML={{ __html: formatComment(post.comment) }}
           />
-          {backlinks.length > 0 && (
-            <div className="backlinks">
-              <span>Replies:</span>
-              {backlinks.map((no) => (
-                <a key={no} className="qlink" data-no={no} href={`#p${no}`}>
-                  &gt;&gt;{no}
-                </a>
-              ))}
-            </div>
-          )}
+          <Backlinks nos={backlinks} />
         </div>
       </div>
     </article>
+  );
+}
+
+export function Backlinks({ nos }: { nos: number[] }) {
+  if (nos.length === 0) return null;
+  return (
+    <div className="backlinks">
+      <span>Replies:</span>
+      {nos.map((no) => (
+        <a key={no} className="qlink" data-no={no} href={`#p${no}`}>
+          &gt;&gt;{no}
+        </a>
+      ))}
+    </div>
   );
 }

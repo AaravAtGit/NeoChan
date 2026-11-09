@@ -100,11 +100,3 @@ export default function ThreadCard({
     </article>
   );
 }
-
-
-
-
-
-
-
-

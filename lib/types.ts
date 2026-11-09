@@ -11,17 +11,17 @@ export type Post = {
 };
 
 export type Thread = {
-  no: number;       // same as OP's no
+  no: number;
   board: string;
   subject: string;
   op: Post;
   replies: Post[];
-  bumpedAt: number; // ms — for ordering
+  bumpedAt: number;
 };
 
 export type Board = {
-  slug: string;     // 'oc', 'g', 'tech'…
-  title: string;    // 'Hardware'
+  slug: string;
+  title: string;
   description: string;
   accent: 'yellow' | 'pink' | 'red' | 'paper';
 };

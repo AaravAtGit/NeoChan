@@ -1,9 +1,8 @@
-import { boards as allBoards } from "@/lib/boards";
+import { boards } from "@/lib/boards";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function Header({ current }: { current?: string }) {
-    const boards = allBoards.slice(0, 10);
     return (
         <>
             <header className="topbar">
@@ -28,11 +27,7 @@ export default function Header({ current }: { current?: string }) {
                     ))}
                 </nav>
             </header>
-            <HazardStripe />
+            <div className="hazard" />
         </>
     );
-}
-
-function HazardStripe() {
-    return <div className="hazard" />;
 }

@@ -95,5 +95,4 @@ export const rules: Rule[] = [
     explanation: "See rule 34. See also: rule 44." },
   { no: 47, title: "The pool is always closed.",
     explanation: "Slang for when jerks ruin something good. A reference to Habbo Hotel raids. The pool is closed." },
-  
 ];
