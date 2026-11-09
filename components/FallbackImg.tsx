@@ -11,20 +11,19 @@ const FALLBACKS = [
   "/404Images/404-5.png",
 ];
 
+// same broken url always gets the same 404 pic
 function fallbackFor(src: string) {
   let hash = 0;
   for (let i = 0; i < src.length; i++) hash = (hash * 31 + src.charCodeAt(i)) | 0;
   return FALLBACKS[Math.abs(hash) % FALLBACKS.length];
 }
 
-type Props = ImgHTMLAttributes<HTMLImageElement> & { src: string };
-
-export default function FallbackImg({ src, alt = "", ...props }: Props) {
+export default function FallbackImg({ src, alt = "", ...props }: ImgHTMLAttributes<HTMLImageElement> & { src: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const ref = useRef<HTMLImageElement>(null);
-  const failed = failedSrc === src;
 
-  
+  // if the image already failed before hydration, onError never fired.
+  // setting src again makes the browser retry and fire it this time
   useEffect(() => {
     const img = ref.current;
     if (img?.complete && img.naturalWidth === 0) img.src = src;
@@ -35,7 +34,7 @@ export default function FallbackImg({ src, alt = "", ...props }: Props) {
       {...props}
       alt={alt}
       ref={ref}
-      src={failed ? fallbackFor(src) : src}
+      src={failedSrc === src ? fallbackFor(src) : src}
       onError={() => setFailedSrc(src)}
     />
   );

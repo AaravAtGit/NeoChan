@@ -1,69 +1,47 @@
 import { getBoardBySlug } from "./boards";
 import { getThreads } from "./store";
 
-const XML_ESCAPES: Record<string, string> = { "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" };
+const cdata = (s: string) => `<![CDATA[${s.replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
+const escape = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function escapeXml(unsafe: string): string {
-  return unsafe.replace(/[<>&'"]/g, (c) => XML_ESCAPES[c]);
-}
-
-function cleanCdata(text: string): string {
-  return text.replace(/]]>/g, "]]]]><![CDATA[>");
-}
-
-export async function generateBoardRssXml(boardSlug: string, origin: string): Promise<string | null> {
-  const board = getBoardBySlug(boardSlug);
+export async function generateBoardRssXml(slug: string, origin: string) {
+  const board = getBoardBySlug(slug);
   if (!board) return null;
 
   const threads = await getThreads(board.slug);
-  const siteUrl = origin.replace(/\/+$/, "");
-  const boardUrl = `${siteUrl}/${board.slug}`;
-  const feedUrl = `${siteUrl}/${board.slug}/rss.xml`;
-  const channelTitle = board.slug === "all" ? "NeoChan - All Boards Stream" : `NeoChan - /${board.slug}/ - ${board.title}`;
+  const title = board.slug === "all" ? "NeoChan - All Boards" : `NeoChan - /${board.slug}/ - ${board.title}`;
 
-  const itemsXml = threads
-    .map((thread) => {
-      const threadBoard = thread.board || board.slug;
-      const threadUrl = `${siteUrl}/${threadBoard}/${thread.no}`;
-      const title =
-        thread.subject?.trim() ||
-        (thread.op.comment ? thread.op.comment.replace(/\n+/g, " ").slice(0, 70).trim() : `Thread #${thread.no}`);
-      const pubDate = thread.bumpedAt ? new Date(thread.bumpedAt).toUTCString() : new Date().toUTCString();
-      const author = thread.op.name || "Anonymous";
+  const items = threads.map((t) => {
+    const url = `${origin}/${t.board}/${t.no}`;
+    const img = t.op.image;
 
-      let descriptionHtml = `<p>${escapeXml(thread.op.comment)}</p>`;
-      if (thread.op.image) {
-        descriptionHtml = `<p><img src="${escapeXml(thread.op.image.url)}" alt="${escapeXml(thread.op.image.name || "image")}" style="max-width:300px;" /></p>` + descriptionHtml;
-      }
-      descriptionHtml += `<p><small>Replies: ${thread.replies.length} | Board: /${threadBoard}/ | No.${thread.no}</small></p>`;
+    let html = "";
+    if (img) html += `<p><img src="${escape(img.url)}" alt="${escape(img.name)}" style="max-width:300px" /></p>`;
+    html += `<p>${escape(t.op.comment)}</p>`;
+    html += `<p><small>${t.replies.length} replies | /${t.board}/ | No.${t.no}</small></p>`;
 
-      const enclosure = thread.op.image?.url
-        ? `<enclosure url="${escapeXml(thread.op.image.url)}" length="0" type="image/jpeg" />`
-        : "";
-
-      return `    <item>
-      <title><![CDATA[${cleanCdata(title)}]]></title>
-      <link>${threadUrl}</link>
-      <guid isPermaLink="true">${threadUrl}</guid>
-      <pubDate>${pubDate}</pubDate>
-      <author><![CDATA[${cleanCdata(author)}]]></author>
-      <description><![CDATA[${cleanCdata(descriptionHtml)}]]></description>
-      <comments>${threadUrl}</comments>
-      ${enclosure}
+    return `
+    <item>
+      <title>${cdata(t.subject || t.op.comment.replace(/\s+/g, " ").slice(0, 70))}</title>
+      <link>${url}</link>
+      <guid isPermaLink="true">${url}</guid>
+      <pubDate>${new Date(t.bumpedAt).toUTCString()}</pubDate>
+      <author>${cdata(t.op.name)}</author>
+      <description>${cdata(html)}</description>
+      <comments>${url}</comments>${img ? `\n      <enclosure url="${escape(img.url)}" length="0" type="image/jpeg" />` : ""}
     </item>`;
-    })
-    .join("\n");
+  });
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title><![CDATA[${cleanCdata(channelTitle)}]]></title>
-    <link>${boardUrl}</link>
-    <description><![CDATA[${cleanCdata(board.description)}]]></description>
+    <title>${cdata(title)}</title>
+    <link>${origin}/${board.slug}</link>
+    <description>${cdata(board.description)}</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-    <atom:link href="${feedUrl}" rel="self" type="application/rss+xml" />
-${itemsXml}
+    <atom:link href="${origin}/${board.slug}/rss.xml" rel="self" type="application/rss+xml" />${items.join("")}
   </channel>
 </rss>`;
 }

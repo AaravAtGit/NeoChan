@@ -1,6 +1,7 @@
 import PostForm from "@/components/PostForm";
+import PostPreviews from "@/components/PostPreviews";
+import QuickReply from "@/components/QuickReply";
 import Thread from "@/components/Thread";
-import ThreadClient from "@/components/ThreadClient";
 import { getBoardBySlug } from "@/lib/boards";
 import { getThread } from "@/lib/store";
 import Link from "next/link";
@@ -13,31 +14,17 @@ export default async function ThreadPage({ params }: { params: Promise<{ board: 
     const thread = await getThread(boardSlug, threadNo);
     if (!board || !thread) notFound();
 
-    const initialPosts = [
-        { ...thread.op, threadNo: thread.no, board: board.slug },
-        ...thread.replies.map(r => ({ ...r, threadNo: thread.no, board: board.slug })),
-    ];
+    const posts = [thread.op, ...thread.replies].map(p => ({ ...p, threadNo, board: board.slug }));
 
     return (
-        <ThreadClient board={board.slug} threadNo={threadNo} initialPosts={initialPosts}>
+        <>
             <main className="wrap">
                 <nav className="breadcrumb">
                     <Link href="/">← Home</Link>
                     &nbsp;/&nbsp;
-                    <Link
-                        href={`/${board.slug}`}
-                        style={{
-                            background: "var(--black)",
-                            color: "var(--paper)",
-                            padding: "4px 10px",
-                            border: "2px solid var(--black)",
-                            boxShadow: "3px 3px 0 var(--yellow)",
-                        }}
-                    >
-                        /{board.slug}/
-                    </Link>
+                    <Link href={`/${board.slug}`}>/{board.slug}/</Link>
                     &nbsp;→&nbsp;
-                    <span style={{ color: "var(--yellow)", fontFamily: "var(--mono)", fontWeight: 700 }}>
+                    <span className="here">
                         No.{threadNo}
                     </span>
                 </nav>
@@ -64,6 +51,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ board: 
 
                 <PostForm board={board.slug} threadNo={threadNo} />
             </main>
-        </ThreadClient>
+            <PostPreviews posts={posts} inThread />
+            <QuickReply board={board.slug} threadNo={threadNo} />
+        </>
     );
 }

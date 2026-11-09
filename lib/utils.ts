@@ -1,8 +1,9 @@
-export function escapeHtml(s: string): string {
+export function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function formatComment(raw: string): string {
+// greentext + >>123 links. escape first, so the regexes match on &gt;
+export function formatComment(raw: string) {
   return escapeHtml(raw)
     .split("\n")
     .map((line) => {
@@ -12,33 +13,28 @@ export function formatComment(raw: string): string {
     .join("<br>");
 }
 
-export function extractQuotes(raw: string): number[] {
-  const numbers = (raw.match(/>>(\d+)/g) ?? []).map((m) => Number(m.slice(2)));
-  return [...new Set(numbers)];
-}
-
-export function buildBacklinksMap(thread: { replies: { no: number; comment: string }[] }): Map<number, number[]> {
+// post no -> nos of the replies that quote it
+export function buildBacklinksMap(thread: { replies: { no: number; comment: string }[] }) {
   const map = new Map<number, number[]>();
   for (const reply of thread.replies) {
-    for (const q of extractQuotes(reply.comment)) {
-      map.set(q, [...(map.get(q) ?? []), reply.no]);
-    }
+    const quoted = new Set([...reply.comment.matchAll(/>>(\d+)/g)].map((m) => Number(m[1])));
+    for (const no of quoted) map.set(no, [...(map.get(no) ?? []), reply.no]);
   }
   return map;
 }
 
-export function nowStamp(): string {
+// adds ">>no" on a new line, unless it's already in there
+export function appendQuote(comment: string, no: number | string) {
+  const quote = `>>${no}`;
+  const text = comment.trim();
+  if (text.split(/\s+/).includes(quote)) return comment;
+  return (text ? text + "\n" : "") + quote + " ";
+}
+
+// 4chan style date: 08/12/26(Wed)14:02:11
+export function nowStamp() {
   const d = new Date();
-  const wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getMonth() + 1)}/${p(d.getDate())}/${String(d.getFullYear()).slice(2)}(${wd})${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${pad(d.getFullYear() % 100)}(${day})${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
-
-export function relativeTime(ms: number): string {
-  const diff = (Date.now() - ms) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-

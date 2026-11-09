@@ -4,8 +4,8 @@ import { rules } from "@/lib/rules";
 import Link from "next/link";
 
 export default function HomePage() {
-    const highlightRuleNos = [1, 2, 3, 8, 9, 14, 20, 32, 33, 34];
-    const highlightedRules = rules.filter(r => highlightRuleNos.includes(r.no));
+    const featured = [1, 2, 3, 8, 9, 14, 20, 32, 33, 34];
+    const featuredRules = rules.filter(r => featured.includes(r.no));
 
     return (
         <main className="wrap">
@@ -30,11 +30,11 @@ export default function HomePage() {
                 <i />
             </div>
 
-            <div className="section-head" id="threads">
+            <div className="section-head" id="boards">
                 <h2>Boards</h2>
                 <span>{boards.length} ACTIVE BOARDS</span>
             </div>
-            <div className="board-grid" id="boards">
+            <div className="board-grid">
                 {boards.map(b => (
                     <BoardCard key={b.slug} board={b} />
                 ))}
@@ -59,7 +59,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="home-rules-grid">
-                    {highlightedRules.map((r) => (
+                    {featuredRules.map(r => (
                         <Link
                             key={r.no}
                             href={`/rules#rule-${r.no}`}

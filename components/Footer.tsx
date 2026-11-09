@@ -6,56 +6,25 @@ import { usePathname, useRouter } from "next/navigation";
 export default function Footer() {
     const path = usePathname();
     const router = useRouter();
-    const active = (p: string) => (path === p ? "active" : "");
 
-    const handleArchive = (e: React.MouseEvent) => {
-        e.preventDefault();
-        alert("Sorry, Archives are not available yet.");
-    };
-
-    const handleTop = (e: React.MouseEvent) => {
-        e.preventDefault();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
-    const handlePost = (e: React.MouseEvent) => {
-        e.preventDefault();
-        if (path === "/") {
-            const target =
-                document.getElementById("threads") ||
-                document.getElementById("boards") ||
-                document.querySelector(".board-grid");
-            if (target) {
-                target.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
+    function post() {
+        // board/thread pages have a post form, everywhere else go pick a board
+        if (document.getElementById("postform")) {
+            window.dispatchEvent(new Event("neochan:open-post"));
+        } else if (path === "/") {
+            document.getElementById("boards")?.scrollIntoView({ behavior: "smooth" });
         } else {
-            const postForm = document.querySelector(".postform, .pf-closed-bar");
-            if (postForm) {
-                window.dispatchEvent(new CustomEvent("neochan:open-post"));
-            } else {
-                router.push("/#threads");
-            }
+            router.push("/#boards");
         }
-    };
+    }
 
     return (
         <nav className="tabbar">
-            <Link href="/" className={active("/")}>
-                Home
-            </Link>
-            <Link href="/rules" className={active("/rules")}>
-                Rules
-            </Link>
-            <button type="button" onClick={handleArchive}>
-                Archive
-            </button>
-            <button type="button" onClick={handleTop}>
-                Top
-            </button>
-            <button type="button" className="post" onClick={handlePost}>
-                Post
-            </button>
+            <Link href="/" className={path === "/" ? "active" : ""}>Home</Link>
+            <Link href="/rules" className={path === "/rules" ? "active" : ""}>Rules</Link>
+            <button type="button" onClick={() => alert("Sorry, Archives are not available yet.")}>Archive</button>
+            <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Top</button>
+            <button type="button" className="post" onClick={post}>Post</button>
         </nav>
     );
 }
-

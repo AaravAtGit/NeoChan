@@ -1,6 +1,6 @@
 import PostForm from "@/components/PostForm";
+import PostPreviews from "@/components/PostPreviews";
 import ThreadCard from "@/components/ThreadCard";
-import ThreadClient from "@/components/ThreadClient";
 import { getBoardBySlug } from "@/lib/boards";
 import { getThreads } from "@/lib/store";
 import { Metadata } from "next";
@@ -31,18 +31,18 @@ export default async function BoardPage({ params }: { params: Promise<{ board: s
 
     const threads = await getThreads(board.slug);
 
-    const initialPosts = threads.flatMap(t => [
-        { ...t.op, threadNo: t.no, board: t.board || board.slug },
-        ...t.replies.map(r => ({ ...r, threadNo: t.no, board: t.board || board.slug })),
-    ]);
+    const posts = threads.flatMap(t =>
+        [t.op, ...t.replies].map(p => ({ ...p, threadNo: t.no, board: t.board }))
+    );
+    const postCount = threads.reduce((n, t) => n + 1 + t.replies.length, 0);
 
     return (
-        <ThreadClient board={board.slug} initialPosts={initialPosts}>
+        <>
             <main className="wrap">
                 <nav className="breadcrumb">
                     <Link href="/">← Home</Link>
                     &nbsp;/&nbsp;
-                    <span style={{ color: "var(--yellow)", fontFamily: "var(--mono)", fontWeight: 700 }}>
+                    <span className="here">
                         /{board.slug}/
                     </span>
                 </nav>
@@ -66,7 +66,7 @@ export default async function BoardPage({ params }: { params: Promise<{ board: s
                     <p className="lead">{board.description}</p>
                     <div className="meta">
                         <span>{threads.length} THREADS</span>
-                        <span>POSTS: {threads.reduce((s, t) => s + 1 + t.replies.length, 0)}</span>
+                        <span>POSTS: {postCount}</span>
                         <span>ANONYMOUS</span>
                     </div>
                 </section>
@@ -92,6 +92,7 @@ export default async function BoardPage({ params }: { params: Promise<{ board: s
                     <ThreadCard key={t.no} board={board.slug} thread={t} preview={3} />
                 ))}
             </main>
-        </ThreadClient>
+            <PostPreviews posts={posts} />
+        </>
     );
 }

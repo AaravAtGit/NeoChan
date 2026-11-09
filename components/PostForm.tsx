@@ -60,30 +60,15 @@ export default function PostForm({ board, threadNo }: { board: string; threadNo?
         },
     );
 
+    // the footer's Post button and quick reply's "go to bottom form" fire this
     useEffect(() => {
-        function handleOpenPost() {
+        function open() {
             setIsOpen(true);
             focusForm();
         }
-        window.addEventListener("neochan:open-post", handleOpenPost);
-        return () => window.removeEventListener("neochan:open-post", handleOpenPost);
+        window.addEventListener("neochan:open-post", open);
+        return () => window.removeEventListener("neochan:open-post", open);
     }, []);
-
-    useEffect(() => {
-        if (!threadNo) return;
-        function handleQuote(e: Event) {
-            const insertion = `>>${(e as CustomEvent<{ no: string }>).detail.no}`;
-            setIsOpen(true);
-            setComment(c => {
-                const base = c.trim();
-                if (base.split(/\s+/).includes(insertion)) return c;
-                return (base ? base + "\n" : "") + insertion + " ";
-            });
-            focusForm();
-        }
-        window.addEventListener("neochan:quote", handleQuote);
-        return () => window.removeEventListener("neochan:quote", handleQuote);
-    }, [threadNo]);
 
     function submit(e: FormEvent) {
         e.preventDefault();

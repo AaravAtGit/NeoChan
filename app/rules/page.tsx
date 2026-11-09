@@ -13,7 +13,7 @@ export default function RulesPage() {
       <nav className="breadcrumb">
         <Link href="/">← Home</Link>
         &nbsp;/&nbsp;
-        <span style={{ color: "var(--yellow)", fontFamily: "var(--mono)", fontWeight: 700 }}>
+        <span className="here">
           Rules
         </span>
       </nav>

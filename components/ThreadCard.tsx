@@ -12,24 +12,18 @@ export default function ThreadCard({
   thread: Thread;
   preview?: number;
 }) {
-  const threadBoard = thread.board || board;
   const shown = thread.replies.slice(-preview);
   const hidden = Math.max(0, thread.replies.length - preview);
 
   return (
-    <article
-      className="thread-card"
-      id={`p${thread.no}`}
-      data-thread-no={thread.no}
-      data-board={threadBoard}
-    >
+    <article className="thread-card" id={`p${thread.no}`}>
       <header className="op-head">
         <span className="chk">✓</span>
         <span className="name">{thread.op.name}</span>
         <span className="dateblk">{thread.op.date}</span>
         <span className="no">
           <Link
-            href={`/${threadBoard}/${thread.no}#p${thread.no}`}
+            href={`/${thread.board}/${thread.no}#p${thread.no}`}
             title="Open thread"
           >
             No.{thread.no}
@@ -37,16 +31,16 @@ export default function ThreadCard({
         </span>
         {board === "all" && (
           <Link
-            href={`/${threadBoard}`}
+            href={`/${thread.board}`}
             className="badge red"
             style={{ textDecoration: "none" }}
-            title={`View /${threadBoard}/ board`}
+            title={`View /${thread.board}/ board`}
           >
-            /{threadBoard}/
+            /{thread.board}/
           </Link>
         )}
         <span className="badge">OP</span>
-        <Link href={`/${threadBoard}/${thread.no}`} className="btn small">
+        <Link href={`/${thread.board}/${thread.no}`} className="btn small">
           Reply →
         </Link>
         <div className="subj">{thread.subject}</div>
@@ -61,26 +55,18 @@ export default function ThreadCard({
       {hidden > 0 && (
         <p className="omitted">
           {hidden} post{hidden === 1 ? "" : "s"} omitted —{" "}
-          <Link href={`/${threadBoard}/${thread.no}`}>click to view all</Link>
+          <Link href={`/${thread.board}/${thread.no}`}>click to view all</Link>
         </p>
       )}
       {shown.length > 0 && (
-        <div
-          className="replies"
-          style={{
-            padding: "6px 20px 22px 44px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
+        <div className="replies">
           {shown.map((r) => (
-            <article key={r.no} id={`p${r.no}`} className="reply" data-thread-no={thread.no} data-board={threadBoard}>
+            <article key={r.no} id={`p${r.no}`} className="reply">
               <div className="rhead">
                 <span className="name">{r.name}</span>
                 <span className="dateblk">{r.date}</span>
                 <span className="no">
-                  <Link href={`/${threadBoard}/${thread.no}#p${r.no}`} data-no={r.no} className="post-no">
+                  <Link href={`/${thread.board}/${thread.no}#p${r.no}`} data-no={r.no} className="post-no">
                     No.{r.no}
                   </Link>
                 </span>

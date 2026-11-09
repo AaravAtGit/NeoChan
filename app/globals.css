@@ -821,7 +821,7 @@ button {
     border-top: 2px dashed #c9bfae;
 }
 
-.thread-page .replies {
+.thread-card .replies {
     padding: 6px 20px 22px 44px;
     display: flex;
     flex-direction: column;
@@ -873,6 +873,9 @@ button {
     font-family: var(--mono);
     font-size: 12px;
     font-weight: 700;
+}
+.breadcrumb .here {
+    color: var(--yellow);
 }
 .breadcrumb a {
     color: var(--paper);
@@ -1204,7 +1207,7 @@ button {
     .op-body {
         flex-direction: column;
     }
-    .thread-page .replies {
+    .thread-card .replies {
         padding-left: 20px;
     }
     .boards {

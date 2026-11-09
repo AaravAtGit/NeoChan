@@ -2,7 +2,7 @@ import { boards } from "@/lib/boards";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function Header({ current }: { current?: string }) {
+export default function Header() {
     return (
         <>
             <header className="topbar">
@@ -21,7 +21,7 @@ export default function Header({ current }: { current?: string }) {
                 </Link>
                 <nav className="boards">
                     {boards.map(b => (
-                        <Link key={b.slug} href={`/${b.slug}`} className={current === b.slug ? "cur" : ""}>
+                        <Link key={b.slug} href={`/${b.slug}`}>
                             [/{b.slug}/]
                         </Link>
                     ))}
